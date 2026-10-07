@@ -31,6 +31,17 @@ if (-not $Version) {
 $Version = $Version.TrimStart("v")
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must look like 1.2.3 (got '$Version')" }
 
+# Release notes = this version's section of CHANGELOG.md ("## [1.2.3] ..." up to the next "## ").
+$changelog = Get-Content (Join-Path $root "CHANGELOG.md") -Encoding UTF8
+$start = ($changelog | Select-String -Pattern "^## \[?v?$([regex]::Escape($Version))\]?(\s|$)" | Select-Object -First 1).LineNumber
+if (-not $start) { throw "CHANGELOG.md has no '## [$Version]' section. Add one before releasing." }
+$notes = foreach ($line in $changelog[$start..($changelog.Count - 1)]) { if ($line -match '^## ') { break }; $line }
+$notes = ($notes -join "`n").Trim()
+if (-not $notes) { throw "CHANGELOG.md section for $Version is empty." }
+$notesFile = Join-Path $root "publish\release-notes.md"
+New-Item -ItemType Directory -Force (Split-Path $notesFile) | Out-Null
+[IO.File]::WriteAllText($notesFile, $notes + "`n")
+
 function Invoke-Checked {
     & $args[0] $args[1..($args.Count - 1)]
     if ($LASTEXITCODE -ne 0) { throw "Command failed ($LASTEXITCODE): $($args -join ' ')" }
@@ -56,7 +67,8 @@ try {
 
     Write-Host "`n==> Packing installer + update package" -ForegroundColor Cyan
     $packArgs = @("vpk", "pack", "--packId", "WolfSpeak", "--packVersion", $Version, "--packDir", $appDir,
-        "--mainExe", "WolfSpeak.exe", "--packTitle", "WolfSpeak", "--icon", $icon, "-r", $Runtime, "-o", $releaseDir)
+        "--mainExe", "WolfSpeak.exe", "--packTitle", "WolfSpeak", "--icon", $icon, "-r", $Runtime, "-o", $releaseDir,
+        "--releaseNotes", $notesFile)
     if (-not $SelfContained) { $packArgs += @("--framework", "net10.0-$arch-desktop") } # Setup installs the runtime if missing
     Invoke-Checked dotnet @packArgs
 

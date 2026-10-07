@@ -76,7 +76,9 @@ scripts/
 ### Releasing a new version
 
 1. Bump `<Version>` in `src/WolfSpeak.csproj` (e.g. `1.0.4`).
-2. Commit, then tag and push:
+2. Add a `## [1.0.4] - <date>` section to [`CHANGELOG.md`](CHANGELOG.md) — it becomes the release notes
+   (the release fails without it).
+3. Commit, then tag and push:
 
 ```bash
 git tag v1.0.4
