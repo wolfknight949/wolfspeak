@@ -19,8 +19,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
-$project = Join-Path $root "src\WolfSpeak\WolfSpeak.csproj"
-$icon = Join-Path $root "src\WolfSpeak\assets\wolfspeak.ico"
+$project = Join-Path $root "src\WolfSpeak.csproj"
+$icon = Join-Path $root "src\assets\wolfspeak.ico"
 $appDir = Join-Path $root "publish\release-app"
 $releaseDir = Join-Path $root "publish\releases"
 $arch = $Runtime.Split("-")[-1]

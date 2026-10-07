@@ -59,7 +59,7 @@ Requires the .NET 10 SDK.
 
 ```
 WolfSpeak.slnx
-src/WolfSpeak/          the app (C# / WPF)
+src/                    the app (C# / WPF)
   assets/               icon + artwork
 scripts/
   build.ps1             build (-Run to launch)
@@ -75,11 +75,11 @@ scripts/
 
 ### Releasing a new version
 
-1. Bump `<Version>` in `src/WolfSpeak/WolfSpeak.csproj` (e.g. `1.0.2`).
+1. Bump `<Version>` in `src/WolfSpeak.csproj` (e.g. `1.0.4`).
 2. Commit, then tag and push:
 
 ```bash
-git tag v1.0.2
+git tag v1.0.4
 ```
 
 ```bash
@@ -87,7 +87,7 @@ git push origin main --tags
 ```
 
 The **Release** GitHub Action builds the installer and publishes the GitHub Release. Every installed
-WolfSpeak picks it up within the hour (within 5 minutes when it sees a friend already on 1.0.2).
+WolfSpeak picks it up within the hour (within 5 minutes when it sees a friend already on 1.0.4).
 
 To build a release locally instead: `.\scripts\release.ps1` (add `-Upload` with `$env:GITHUB_TOKEN` set to publish it).
 Updates come from GitHub Releases, so the repository must be **public** (or teammates' builds can't fetch them).
@@ -134,7 +134,7 @@ Produces `publish\win-x64\WolfSpeak.exe` (needs the .NET 10 Desktop Runtime) and
   audio reconnects automatically (falls back to the default device if yours is gone).
 - Use headphones: there is no echo canceller (it would add delay), so speakers would echo back to your friend.
 
-Source files (in `src/WolfSpeak/`):
+Source files (in `src/`):
 
 | File | What |
 |------|------|

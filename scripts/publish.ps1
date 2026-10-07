@@ -19,7 +19,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
-$project = Join-Path $root "src\WolfSpeak\WolfSpeak.csproj"
+$project = Join-Path $root "src\WolfSpeak.csproj"
 $publishRoot = Join-Path $root "publish"
 
 if (-not $Version) {

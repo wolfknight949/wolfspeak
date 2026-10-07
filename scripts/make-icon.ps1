@@ -1,7 +1,7 @@
 # Builds the multi-size Windows icon from the WolfSpeak artwork.
 param(
-    [string]$Source = (Join-Path $PSScriptRoot "..\src\WolfSpeak\assets\wolfspeak-icon.png"),
-    [string]$Out = (Join-Path $PSScriptRoot "..\src\WolfSpeak\assets\wolfspeak.ico")
+    [string]$Source = (Join-Path $PSScriptRoot "..\src\assets\wolfspeak-icon.png"),
+    [string]$Out = (Join-Path $PSScriptRoot "..\src\assets\wolfspeak.ico")
 )
 Add-Type -AssemblyName System.Drawing
 

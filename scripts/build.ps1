@@ -9,7 +9,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 
-$project = Join-Path $PSScriptRoot "..\src\WolfSpeak\WolfSpeak.csproj"
+$project = Join-Path $PSScriptRoot "..\src\WolfSpeak.csproj"
 
 dotnet build $project -c $Configuration
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

@@ -1,5 +1,5 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/WolfSpeak/WolfSpeak.csproj" />
+    <Project Path="src/WolfSpeak.csproj" />
   </Folder>
 </Solution>

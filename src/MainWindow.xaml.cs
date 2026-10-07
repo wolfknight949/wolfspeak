@@ -77,9 +77,13 @@ public partial class MainWindow : Window
         loading = false;
         RestartAudio();
 
+        TitleVersion.Text = "v" + VoiceEngine.AppVersion;
+        AboutVersion.Text = "WolfSpeak " + VoiceEngine.AppVersion;
+        Title = $"WolfSpeak {VoiceEngine.AppVersion}";
+
         var ips = VoiceEngine.LocalAddresses();
         HomeMeSub.Text = ips.Count > 0 ? $"Online · {ips[0]}" : "No network connection";
-        AboutText.Text = $"WolfSpeak {VoiceEngine.AppVersion}\nYour address: {string.Join(", ", ips)}\nUDP port {VoiceEngine.Port} · direct, no servers";
+        AboutText.Text = $"Your address: {string.Join(", ", ips)}\nUDP port {VoiceEngine.Port} · direct, no servers";
 
         engine.Error += msg => Dispatcher.BeginInvoke(() => ShowNotice(msg));
         engine.Notice += msg => Dispatcher.BeginInvoke(() => ShowNotice(msg));
@@ -236,7 +240,45 @@ public partial class MainWindow : Window
     {
         bool friendAhead = engine.Peers.Any(p => Updater.IsNewerThanUs(p.Version));
         if (!await updater.CheckAsync(urgent: friendAhead)) return;
-        if (engine.State != CallState.Idle || quitting) return; // never interrupt a call; retry next tick
+        InstallUpdateIfIdle();
+    }
+
+    async void OnCheckUpdatesClick(object sender, RoutedEventArgs e)
+    {
+        if (!updater.IsInstalled)
+        {
+            ShowUpdateStatus("Updates work in the installed app (WolfSpeak-win-Setup.exe from GitHub Releases).");
+            return;
+        }
+        if (updater.IsBusy) return;
+
+        UpdateButton.IsEnabled = false;
+        UpdateButtonText.Text = "Checking…";
+        bool ready = await updater.CheckAsync(urgent: true, manual: true);
+        UpdateButton.IsEnabled = true;
+        UpdateButtonText.Text = "Check for updates";
+
+        if (ready)
+        {
+            ShowUpdateStatus(engine.State == CallState.Idle
+                ? $"Installing {updater.Ready!.Version}… WolfSpeak will restart in a moment."
+                : $"{updater.Ready!.Version} downloaded — it installs when your call ends.");
+            InstallUpdateIfIdle();
+        }
+        else
+            ShowUpdateStatus(updater.LastError ?? $"You're up to date (v{VoiceEngine.AppVersion}).");
+    }
+
+    void ShowUpdateStatus(string text)
+    {
+        UpdateStatus.Text = text;
+        UpdateStatus.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>Restarts into the downloaded update, unless a call is going (then the update timer retries).</summary>
+    void InstallUpdateIfIdle()
+    {
+        if (updater.Ready is null || engine.State != CallState.Idle || quitting) return; // never interrupt a call
 
         updateTimer.Stop();
         Log.Write($"Installing update {updater.Ready!.Version}");

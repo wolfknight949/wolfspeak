@@ -1,6 +1,7 @@
 # Push a tag like `v1.3.0` → builds WolfSpeak, packs it with Velopack and publishes a GitHub Release.
 # Every installed WolfSpeak picks the new version up automatically.
 name: Release
+run-name: Release ${{ github.event.inputs.version || github.ref_name }}
 
 on:
   push:

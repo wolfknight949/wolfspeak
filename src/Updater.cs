@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Velopack;
 using Velopack.Sources;
 
@@ -19,6 +20,11 @@ public sealed class Updater
 
     /// <summary>A downloaded release waiting to be applied.</summary>
     public VelopackAsset? Ready { get; private set; }
+    /// <summary>False for dev builds and loose exes: only Setup.exe installs can update themselves.</summary>
+    public bool IsInstalled => manager is not null;
+    public bool IsBusy => busy;
+    /// <summary>Why the last check failed (no internet, GitHub unreachable, ...), or null.</summary>
+    public string? LastError { get; private set; }
 
     public Updater()
     {
@@ -31,14 +37,16 @@ public sealed class Updater
     }
 
     /// <summary>Checks GitHub (rate-limited) and downloads a newer release. True once one is ready to apply.</summary>
-    public async Task<bool> CheckAsync(bool urgent)
+    /// <param name="manual">The user pressed "Check for updates": skip the rate limit.</param>
+    public async Task<bool> CheckAsync(bool urgent, bool manual = false)
     {
         if (Ready is not null) return true;
         if (manager is null || busy) return false;
-        if (DateTime.UtcNow - lastCheck < (urgent ? UrgentCheckEvery : CheckEvery)) return false;
+        if (!manual && DateTime.UtcNow - lastCheck < (urgent ? UrgentCheckEvery : CheckEvery)) return false;
 
         busy = true;
         lastCheck = DateTime.UtcNow;
+        LastError = null;
         try
         {
             var info = await manager.CheckForUpdatesAsync();
@@ -51,6 +59,7 @@ public sealed class Updater
         catch (Exception ex)
         {
             Log.Write("Update check failed", ex);
+            LastError = ex is HttpRequestException ? "Couldn't reach GitHub — check your internet connection." : ex.Message;
             return false;
         }
         finally { busy = false; }

@@ -44,6 +44,8 @@
                 <Image Source="{StaticResource WolfHeadsetIcon}" Width="32" Height="32"/>
                 <TextBlock Text="WolfSpeak" FontFamily="{StaticResource DisplayFont}" FontSize="16" FontWeight="SemiBold"
                            Margin="11,0,0,1" VerticalAlignment="Center"/>
+                <TextBlock x:Name="TitleVersion" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}"
+                           Margin="7,2,0,0" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <Button AutomationProperties.Name="Settings" Style="{StaticResource IconButton}" Content="&#xE713;" ToolTip="Settings"
@@ -586,10 +588,36 @@
 
                     <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Margin="0,4,0,6" Opacity="0.8">
                         <Image Source="{StaticResource WolfHeadsetIcon}" Width="16" Height="16" Margin="0,0,7,0"/>
-                        <TextBlock Text="WolfSpeak 1.0" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource SubTextBrush}"/>
+                        <TextBlock x:Name="AboutVersion" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource SubTextBrush}"/>
                     </StackPanel>
                     <TextBlock x:Name="AboutText" HorizontalAlignment="Center" TextAlignment="Center" FontSize="11.5"
                                Foreground="{StaticResource FaintTextBrush}"/>
+                    <Button x:Name="UpdateButton" HorizontalAlignment="Center" Margin="0,12,0,0" Padding="14,6" Cursor="Hand"
+                            Click="OnCheckUpdatesClick" AutomationProperties.Name="Check for updates">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="bd" CornerRadius="14" Padding="{TemplateBinding Padding}" Background="#1E2638"
+                                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE895;" FontFamily="{StaticResource IconFont}" FontSize="11"
+                                                   Foreground="{StaticResource CyanBrush}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                        <ContentPresenter VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource LineHiBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="bd" Property="Opacity" Value="0.6"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <TextBlock x:Name="UpdateButtonText" Text="Check for updates" FontSize="12" Foreground="{StaticResource SubTextBrush}"/>
+                    </Button>
+                    <TextBlock x:Name="UpdateStatus" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" FontSize="11.5"
+                               Foreground="{StaticResource FaintTextBrush}" Margin="0,6,0,0" Visibility="Collapsed"/>
                 </StackPanel>
             </ScrollViewer>
         </Grid>
