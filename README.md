@@ -43,7 +43,7 @@ WolfSpeak uses UDP port **50505**.
 - The tray wolf shows a dot: 🟢 in call · 🔴 muted · 🟡 ringing.
 - Incoming call while hidden → the window pops up, rings, and Windows shows a notification.
 - Opening WolfSpeak again just brings the running one back.
-- Optional: **Start with Windows** (starts silently in the tray) and **Auto-answer calls**.
+- Optional: **Start with Windows** (starts silently in the tray).
 
 ### Settings (⚙)
 - **Microphone / Headphones** — pick your headset.
@@ -105,6 +105,15 @@ Produces `publish\win-x64\WolfSpeak.exe` (needs the .NET 10 Desktop Runtime) and
 
 - **Discovery:** UDP broadcast "hello" every second on port 50505 (plus unicast to saved IPs).
 - **Versions:** every hello carries the app version; calls between different versions are refused.
+- **Encryption:** each call starts with a handshake of fresh P-256 keys, signed by each PC's identity key
+  (kept DPAPI-protected in `%APPDATA%\WolfSpeak\identity.key`). Every packet in the call — audio, ping,
+  hang-up — is AES-256-GCM encrypted and authenticated (~1 µs per packet, no added delay), with replay
+  protection. Spoofed packets can't listen in, inject audio, redirect or end your call.
+- **Safety code:** the 🔒 6-digit code in the call screen is the same on both PCs unless someone is relaying
+  the call in between — read it to each other once. WolfSpeak also remembers each friend's key and warns if
+  it changes (a reinstall, or an impostor).
+- **Discovery is open:** anyone on the network can see your WolfSpeak name and ring you; nobody can connect
+  without you pressing Accept.
 - **Calls:** tiny signaling packets (request / accept / decline / end), repeated until answered since UDP can drop packets.
 - **Audio:** WASAPI capture in 10 ms frames → 16-bit PCM → one UDP packet per frame (~770 kbit/s).
   The receiver keeps a small jitter buffer (default 20 ms) and drops old audio if it ever lags, so delay can't creep up.
@@ -140,3 +149,4 @@ Source files (in `src/WolfSpeak/`):
 | `App.xaml` | theme: colors, wolf logo, control styles |
 | `Program.cs` | entry point; runs Velopack install/update hooks first |
 | `Updater.cs` | background auto-update from GitHub Releases |
+| `CallCrypto.cs` | identity key, signed call handshake, AES-GCM packet encryption |

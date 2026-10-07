@@ -18,9 +18,10 @@ public sealed class Settings
     public bool UltraLowLatency { get; set; } = true;
     public bool HideVirtualHint { get; set; }
     public List<string> ManualIps { get; set; } = [];
+    /// <summary>Friend name → identity key fingerprint seen on the last call (warns if it changes).</summary>
+    public Dictionary<string, string> KnownKeys { get; set; } = [];
     public bool CloseToTray { get; set; } = true;
     public bool TrayHintShown { get; set; }
-    public bool AutoAnswer { get; set; }
     public double? WindowLeft { get; set; }
     public double? WindowTop { get; set; }
 

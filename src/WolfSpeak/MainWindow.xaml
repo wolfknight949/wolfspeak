@@ -316,6 +316,15 @@
                         <TextBlock x:Name="CallTimer" Text="Connected · 00:00" FontSize="11.5" Foreground="{StaticResource SubTextBrush}" Margin="7,0,0,0"/>
                     </StackPanel>
                 </Border>
+                <Border Style="{StaticResource Pill}" Margin="8,0,0,0"
+                        ToolTip="Encrypted call. Read this code to each other: if it matches on both PCs, nobody is listening in between.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72E;" FontFamily="{StaticResource IconFont}" FontSize="11"
+                                   Foreground="{StaticResource TalkBrush}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SafetyCodeText" FontSize="11.5" Foreground="{StaticResource SubTextBrush}" Margin="6,0,0,0"
+                                   AutomationProperties.Name="Safety code"/>
+                    </StackPanel>
+                </Border>
                 <Border x:Name="PingPill" Style="{StaticResource Pill}" HorizontalAlignment="Right">
                     <StackPanel Orientation="Horizontal">
                         <Ellipse x:Name="QualityDot" Width="7" Height="7" Fill="{StaticResource TalkBrush}" VerticalAlignment="Center"/>
@@ -526,16 +535,6 @@
                                 <StackPanel>
                                     <TextBlock Text="Start with Windows" FontSize="13.5" FontWeight="SemiBold"/>
                                     <TextBlock Text="Starts quietly in the tray when you log in" TextWrapping="Wrap"
-                                               FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" Margin="0,2,8,0"/>
-                                </StackPanel>
-                            </DockPanel>
-                            <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,14"/>
-                            <DockPanel>
-                                <CheckBox x:Name="AutoAnswerSwitch" Style="{StaticResource Switch}" DockPanel.Dock="Right" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Auto-answer calls"/>
-                                <StackPanel>
-                                    <TextBlock Text="Auto-answer calls" FontSize="13.5" FontWeight="SemiBold"/>
-                                    <TextBlock Text="Connect instantly when a friend calls — great for gaming sessions" TextWrapping="Wrap"
                                                FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" Margin="0,2,8,0"/>
                                 </StackPanel>
                             </DockPanel>

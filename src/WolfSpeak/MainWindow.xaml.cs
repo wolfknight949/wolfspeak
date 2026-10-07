@@ -326,7 +326,6 @@ public partial class MainWindow : Window
         UltraSwitch.IsChecked = settings.UltraLowLatency;
         engine.UltraLowLatency = settings.UltraLowLatency;
         StartupSwitch.IsChecked = Autostart.IsEnabled;
-        AutoAnswerSwitch.IsChecked = settings.AutoAnswer;
         engine.Name = settings.Name;
 
         PttMode.IsChecked = settings.PushToTalk;
@@ -385,8 +384,6 @@ public partial class MainWindow : Window
         TraySwitch.Unchecked += (_, _) => settings.CloseToTray = false;
         StartupSwitch.Checked += (_, _) => Autostart.Set(true);
         StartupSwitch.Unchecked += (_, _) => Autostart.Set(false);
-        AutoAnswerSwitch.Checked += (_, _) => settings.AutoAnswer = true;
-        AutoAnswerSwitch.Unchecked += (_, _) => settings.AutoAnswer = false;
         GateSlider.ValueChanged += (_, _) => OnSliders();
         GainSlider.ValueChanged += (_, _) => OnSliders();
         VolSlider.ValueChanged += (_, _) => OnSliders();
@@ -580,11 +577,6 @@ public partial class MainWindow : Window
         switch (to)
         {
             case CallState.Ringing:
-                if (settings.AutoAnswer)
-                {
-                    engine.Accept();
-                    break;
-                }
                 RingStatus.Text = "is howling at you — wants to talk";
                 DeclineLabel.Text = "Decline";
                 AcceptPanel.Visibility = Visibility.Visible;
@@ -598,6 +590,7 @@ public partial class MainWindow : Window
                 nextRingSoundMs = 0;
                 break;
             case CallState.Connected:
+                CheckPartnerKey();
                 engine.PlaySound(SoundKind.Connected);
                 engine.Deafened = false;
                 UpdateCallButtons();
@@ -609,6 +602,23 @@ public partial class MainWindow : Window
                 break;
         }
         if (settingsOpen && to != CallState.Idle && from == CallState.Idle) ToggleSettings(false);
+    }
+
+    /// <summary>
+    /// Remembers each friend's key (trust on first use). If someone with the same name shows up with a
+    /// different key, that's either a reinstall or an impostor — say so, and point at the safety code.
+    /// </summary>
+    void CheckPartnerKey()
+    {
+        if (engine.Partner is not { } p || engine.PartnerFingerprint is not { } fp) return;
+        if (settings.KnownKeys.TryGetValue(p.Name, out var known) && known != fp)
+            ShowNotice($"⚠ {p.Name}'s security key changed since your last call. If they didn't reinstall WolfSpeak, " +
+                       "compare the safety code (top of the call screen) out loud before talking.");
+        if (known != fp)
+        {
+            settings.KnownKeys[p.Name] = fp;
+            settings.Save();
+        }
     }
 
     void UpdatePartnerHeader(Ellipse avatar, TextBlock initials, TextBlock name)
@@ -626,6 +636,7 @@ public partial class MainWindow : Window
 
         var elapsed = TimeSpan.FromMilliseconds(now - engine.ConnectedAtMs);
         CallTimer.Text = $"Connected · {(int)elapsed.TotalMinutes:00}:{elapsed.Seconds:00}";
+        SafetyCodeText.Text = engine.SafetyCode ?? "";
 
         double rtt = engine.RttMs;
         double loss = engine.LossPercent;

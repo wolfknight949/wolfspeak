@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
@@ -38,8 +40,12 @@ public enum CallState { Idle, Calling, Ringing, Connected }
 /// in 5 ms UDP packets (~770 kbit/s, trivial for a LAN). Peers find each other with UDP broadcast.
 ///
 /// Packet: 'W' 'S' type(1) senderId(4) payload
-///   Hello: UTF-8 name + 0 + UTF-8 app version   Audio: seq(2) + 480 x int16   Bye / CallRequest / CallAccept / CallEnd: (none)
-///   CallDecline: reason(1, 0 = declined, 1 = busy, 2 = different app version)   Ping / Pong: timestamp(8)
+///   Hello: UTF-8 name + 0 + UTF-8 app version   Bye / CallEnd (cancel while ringing): (none)
+///   CallRequest / CallAccept: signed ephemeral key handshake (see <see cref="CallCrypto"/>)
+///   CallDecline: reason(1, 0 = declined, 1 = busy, 2 = different app version)
+///   Secure: counter(8) + AES-GCM(innerType(1) + inner payload) + tag(16) — everything once connected:
+///     Audio: seq(2) + flags(1) + 240 x int16   Ping / Pong: timestamp(8)   CallEnd / Bye: (none)
+/// Discovery is open by nature; once a call is up, only packets sealed with the call key are accepted.
 /// </summary>
 public sealed class VoiceEngine : IDisposable
 {
@@ -52,9 +58,12 @@ public sealed class VoiceEngine : IDisposable
 
     const byte TypeHello = 1, TypeAudio = 2, TypeBye = 3,
         TypeCallRequest = 4, TypeCallAccept = 5, TypeCallDecline = 6, TypeCallEnd = 7,
-        TypePing = 8, TypePong = 9;
+        TypePing = 8, TypePong = 9, TypeSecure = 10;
     const byte DeclineNormal = 0, DeclineBusy = 1, DeclineVersion = 2;
     const int HeaderSize = 7;
+    const int MaxPeers = 64;          // spoofed hellos can't grow the peer list (and audio mixer) without bound
+    const int MaxHelloPayload = 200;
+    const int MaxNameLength = 32;
     const int TickMs = 250;
     const int PeerTimeoutMs = 5000;
     const int RingTimeoutMs = 30000;
@@ -85,6 +94,12 @@ public sealed class VoiceEngine : IDisposable
     volatile CallState state;
     volatile uint partnerId;
     long callStartMs, lastRequestMs;
+    readonly Identity identity = Identity.LoadOrCreate();
+    ECDiffieHellman? myEph;
+    byte[]? myEphPub, requestPayload, acceptPayload, partnerEph;
+    volatile CallSession? session;
+    readonly byte[] rxPlain = new byte[2048]; // receive thread only
+    long lastBadPacketLogMs = -10000;
 
     // Capture-thread state
     LinearResampler? resampler;
@@ -94,7 +109,8 @@ public sealed class VoiceEngine : IDisposable
     int frameFill;
     int hangover;
     ushort txSeq;
-    readonly byte[] txPacket = new byte[HeaderSize + 3 + FrameSamples * 2];
+    readonly byte[] txPlain = new byte[1 + 3 + FrameSamples * 2];
+    readonly byte[] txPacket = new byte[HeaderSize + CallCrypto.Overhead + 1 + 3 + FrameSamples * 2];
     readonly Biquad highPass = Biquad.HighPass(80, SampleRate);
     const int PreRollFrames = 1; // 5 ms sent from just before the gate opened (more would add delay to every sentence)
     readonly float[][] preRoll = [new float[FrameSamples]];
@@ -115,6 +131,11 @@ public sealed class VoiceEngine : IDisposable
 
     public CallState State => state;
     public Peer? Partner => state != CallState.Idle && peers.TryGetValue(partnerId, out var p) ? p : null;
+    /// <summary>Fingerprint of the partner's identity key, once their handshake signature checked out.</summary>
+    public string? PartnerFingerprint { get; private set; }
+    public string MyFingerprint => CallCrypto.Fingerprint(identity.PublicKey);
+    /// <summary>Safety code both sides see; if they match, nobody is in the middle of the call.</summary>
+    public string? SafetyCode => PartnerFingerprint is null ? null : SafetyCodeFor(MyFingerprint, PartnerFingerprint);
     public long ConnectedAtMs { get; private set; }
     /// <summary>Smoothed round-trip time to the partner in ms, or -1 if unknown.</summary>
     public double RttMs { get; private set; } = -1;
@@ -215,10 +236,12 @@ public sealed class VoiceEngine : IDisposable
         {
             if (state != CallState.Idle || !peers.TryGetValue(id, out var p)) return;
             if (!p.VersionMatches) { Notice?.Invoke(VersionMismatchText(p)); return; }
+            NewEphemeral();
+            requestPayload = CallCrypto.BuildRequest(identity, myId, myEphPub!);
             partnerId = id;
             state = CallState.Calling;
             callStartMs = Environment.TickCount64;
-            SendControl(TypeCallRequest, p);
+            SendControl(TypeCallRequest, p, requestPayload);
         }
     }
 
@@ -227,10 +250,19 @@ public sealed class VoiceEngine : IDisposable
         lock (callLock)
         {
             if (state != CallState.Ringing) return;
-            if (Partner is not { } p) { EndCall(null); return; }
-            SendControl(TypeCallAccept, p);
-            EnterConnected(p);
+            if (Partner is not { } p || partnerEph is null) { EndCall(null); return; }
+            NewEphemeral();
+            AnswerRequest(p, partnerEph);
         }
+    }
+
+    /// <summary>Callee side of the handshake: sign our ephemeral key against theirs, derive the call key.</summary>
+    void AnswerRequest(Peer p, byte[] callerEph)
+    {
+        acceptPayload = CallCrypto.BuildAccept(identity, myId, myEphPub!, callerEph);
+        var key = CallCrypto.DeriveKey(myEph!, callerEph, callerEph, myEphPub!);
+        SendControl(TypeCallAccept, p, acceptPayload);
+        EnterConnected(p, new CallSession(key, isCaller: false));
     }
 
     /// <summary>Cancel an outgoing call, decline an incoming one, or hang up.</summary>
@@ -243,14 +275,23 @@ public sealed class VoiceEngine : IDisposable
             {
                 if (state == CallState.Ringing)
                     SendDecline(p, DeclineNormal);
-                else if (state != CallState.Idle)
+                else if (state == CallState.Connected)
+                    for (int i = 0; i < 3; i++) SendSecure(TypeCallEnd, [], p);
+                else if (state == CallState.Calling)
                     for (int i = 0; i < 3; i++) SendControl(TypeCallEnd, p);
             }
             EndCall(null);
         }
     }
 
-    void EnterConnected(Peer p)
+    void NewEphemeral()
+    {
+        myEph?.Dispose();
+        myEph = CallCrypto.NewEphemeral();
+        myEphPub = myEph.ExportSubjectPublicKeyInfo();
+    }
+
+    void EnterConnected(Peer p, CallSession callSession)
     {
         p.Buffer.Clear();
         p.HasSeq = false;
@@ -259,14 +300,20 @@ public sealed class VoiceEngine : IDisposable
         LossPercent = 0;
         RttMs = -1;
         ConnectedAtMs = Environment.TickCount64;
+        session = callSession;
         state = CallState.Connected;
     }
 
     void EndCall(string? notice)
     {
         state = CallState.Idle;
+        session = null;
         partnerId = 0;
         RttMs = -1;
+        myEph?.Dispose();
+        myEph = null;
+        myEphPub = requestPayload = acceptPayload = partnerEph = null;
+        PartnerFingerprint = null;
         if (notice is not null) Notice?.Invoke(notice);
     }
 
@@ -278,6 +325,7 @@ public sealed class VoiceEngine : IDisposable
             switch (type)
             {
                 case TypeCallRequest:
+                {
                     if (state == CallState.Idle && !from.HelloSeen)
                         break; // don't know their version yet; they repeat the request every 250 ms
                     if (state == CallState.Idle && !from.VersionMatches)
@@ -289,28 +337,47 @@ public sealed class VoiceEngine : IDisposable
                             from.MismatchNoticeMs = now;
                             Notice?.Invoke($"{from.Name} tried to call you. " + VersionMismatchText(from));
                         }
+                        break;
                     }
-                    else if (state == CallState.Idle)
+                    if (state != CallState.Idle && !isPartner)
+                    {
+                        SendDecline(from, DeclineBusy);
+                        break;
+                    }
+                    // Forged or garbled requests never ring.
+                    if (!CallCrypto.VerifyRequest(payload, from.Id, out var eph, out var callerIdentity)) break;
+
+                    if (state == CallState.Idle)
                     {
                         partnerId = from.Id;
+                        partnerEph = eph;
+                        PartnerFingerprint = CallCrypto.Fingerprint(callerIdentity);
                         state = CallState.Ringing;
                         lastRequestMs = Environment.TickCount64;
                     }
-                    else if (isPartner && state == CallState.Ringing)
+                    else if (state == CallState.Ringing && eph.AsSpan().SequenceEqual(partnerEph))
                         lastRequestMs = Environment.TickCount64;
-                    else if (isPartner && state == CallState.Connected)
-                        SendControl(TypeCallAccept, from); // our accept got lost
-                    else if (isPartner && state == CallState.Calling)
+                    else if (state == CallState.Connected && acceptPayload is not null && eph.AsSpan().SequenceEqual(partnerEph))
+                        SendControl(TypeCallAccept, from, acceptPayload); // our accept got lost
+                    else if (state == CallState.Calling && myId < from.Id)
                     {
-                        SendControl(TypeCallAccept, from); // we called each other at the same time
-                        EnterConnected(from);
+                        // We called each other at the same time: the lower id answers, the other one waits for it.
+                        partnerEph = eph;
+                        PartnerFingerprint = CallCrypto.Fingerprint(callerIdentity);
+                        AnswerRequest(from, eph);
                     }
-                    else
-                        SendDecline(from, DeclineBusy);
                     break;
+                }
 
                 case TypeCallAccept:
-                    if (isPartner && state == CallState.Calling) EnterConnected(from);
+                    if (isPartner && state == CallState.Calling && myEph is not null &&
+                        CallCrypto.VerifyAccept(payload, from.Id, myEphPub!, out var calleeEph, out var calleeIdentity))
+                    {
+                        partnerEph = calleeEph;
+                        PartnerFingerprint = CallCrypto.Fingerprint(calleeIdentity);
+                        var key = CallCrypto.DeriveKey(myEph, calleeEph, myEphPub!, calleeEph);
+                        EnterConnected(from, new CallSession(key, isCaller: true));
+                    }
                     break;
 
                 case TypeCallDecline:
@@ -326,10 +393,76 @@ public sealed class VoiceEngine : IDisposable
                     break;
 
                 case TypeCallEnd:
-                    if (isPartner)
-                        EndCall(state == CallState.Ringing ? $"Missed call from {from.Name}" : $"{from.Name} hung up");
+                    // Unsealed: only cancels a call that isn't connected yet. A live call ends via a sealed CallEnd.
+                    if (isPartner && state == CallState.Ringing)
+                        EndCall($"Missed call from {from.Name}");
                     break;
             }
+        }
+    }
+
+    /// <summary>Packets sealed with the call key: the only ones that can touch a connected call.</summary>
+    void OnSecurePacket(Peer peer, IPEndPoint ep, ReadOnlySpan<byte> packet, float[] samples)
+    {
+        var s = session;
+        if (s is null || state != CallState.Connected || peer.Id != partnerId) return;
+        if (!s.TryOpen(packet, HeaderSize, rxPlain, out int length) || length < 1) return;
+
+        // Authenticated, so it's safe to follow the partner to a new address (e.g. a VPN reconnect).
+        if (!peer.EndPoint.Equals(ep)) peer.EndPoint = new IPEndPoint(ep.Address, ep.Port);
+        peer.LastSeen = Environment.TickCount64;
+
+        var payload = rxPlain.AsSpan(1, length - 1);
+        switch (rxPlain[0])
+        {
+            case TypeAudio:
+            {
+                int count = (payload.Length - 3) / 2;
+                if (count <= 0 || count > FrameSamples) break;
+                ushort seq = BinaryPrimitives.ReadUInt16LittleEndian(payload);
+                bool end = (payload[2] & AudioFlagEnd) != 0;
+                if (peer.HasSeq)
+                {
+                    short gap = (short)(seq - peer.LastSeq);
+                    if (gap <= 0) break; // late/duplicate
+                    if (gap > 1 && gap < 100) Interlocked.Add(ref peer.Lost, gap - 1);
+                }
+                peer.LastSeq = seq;
+                peer.HasSeq = true;
+                Interlocked.Increment(ref peer.Received);
+                double sq = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    float v = BinaryPrimitives.ReadInt16LittleEndian(payload[(3 + i * 2)..]) / 32768f;
+                    samples[i] = v;
+                    sq += v * v;
+                }
+                peer.Level = Math.Clamp((float)(10 * Math.Log10(sq / count + 1e-12) + 60) / 50f, 0f, 1f);
+                peer.Buffer.Write(samples.AsSpan(0, count), end);
+                peer.LastAudio = Environment.TickCount64;
+                break;
+            }
+
+            case TypePing when payload.Length == 8:
+                SendSecure(TypePong, payload, peer);
+                break;
+
+            case TypePong when payload.Length == 8:
+            {
+                long sent = BinaryPrimitives.ReadInt64LittleEndian(payload);
+                double rtt = (Stopwatch.GetTimestamp() - sent) * 1000.0 / Stopwatch.Frequency;
+                if (rtt is >= 0 and < 10000) RttMs = RttMs < 0 ? rtt : RttMs * 0.7 + rtt * 0.3;
+                break;
+            }
+
+            case TypeCallEnd:
+                lock (callLock)
+                    if (state == CallState.Connected && peer.Id == partnerId) EndCall($"{peer.Name} hung up");
+                break;
+
+            case TypeBye:
+                LosePeer(peer, $"{peer.Name} closed WolfSpeak");
+                break;
         }
     }
 
@@ -544,14 +677,17 @@ public sealed class VoiceEngine : IDisposable
     void SendFrame(float[] samples, bool end)
     {
         if (loopbackEnabled) loopback.Write(samples, end);
-        if (state != CallState.Connected || !peers.TryGetValue(partnerId, out var partner)) return;
+        var s = session;
+        if (state != CallState.Connected || s is null || !peers.TryGetValue(partnerId, out var partner)) return;
 
-        WriteHeader(txPacket, TypeAudio);
-        BinaryPrimitives.WriteUInt16LittleEndian(txPacket.AsSpan(HeaderSize), txSeq++);
-        txPacket[HeaderSize + 2] = end ? AudioFlagEnd : (byte)0;
-        var pcm = txPacket.AsSpan(HeaderSize + 3);
+        txPlain[0] = TypeAudio;
+        BinaryPrimitives.WriteUInt16LittleEndian(txPlain.AsSpan(1), txSeq++);
+        txPlain[3] = end ? AudioFlagEnd : (byte)0;
+        var pcm = txPlain.AsSpan(4);
         for (int i = 0; i < FrameSamples; i++)
-            BinaryPrimitives.WriteInt16LittleEndian(pcm[(i * 2)..], (short)(samples[i] * 32767f));
+            BinaryPrimitives.WriteInt16LittleEndian(pcm[(i * 2)..], (short)(Math.Clamp(samples[i], -1f, 1f) * 32767f));
+        WriteHeader(txPacket, TypeSecure);
+        s.Seal(txPacket, HeaderSize, txPlain);
         Send(txPacket, partner.EndPoint);
     }
 
@@ -572,95 +708,70 @@ public sealed class VoiceEngine : IDisposable
 
             // A malformed packet from anyone on the LAN must never kill the receiver.
             try { HandlePacket(buf, n, (IPEndPoint)from, samples); }
-            catch (Exception ex) { Log.Write("Ignored bad network packet", ex); }
+            catch (Exception ex)
+            {
+                // Rate-limited so a flood of junk packets can't hammer the disk.
+                long now = Environment.TickCount64;
+                if (now - lastBadPacketLogMs > 10000)
+                {
+                    lastBadPacketLogMs = now;
+                    Log.Write("Ignored bad network packet", ex);
+                }
+            }
         }
     }
 
     void HandlePacket(byte[] buf, int n, IPEndPoint ep, float[] samples)
     {
+        if (n < HeaderSize || buf[0] != 'W' || buf[1] != 'S') return;
+        uint id = BinaryPrimitives.ReadUInt32LittleEndian(buf.AsSpan(3));
+        if (id == myId) return; // our own broadcast
+        byte type = buf[2];
+        var payload = buf.AsSpan(HeaderSize, n - HeaderSize);
+        bool isCallPartner = state == CallState.Connected && id == partnerId;
+
+        if (type == TypeBye)
         {
-            if (n < HeaderSize || buf[0] != 'W' || buf[1] != 'S') return;
-            uint id = BinaryPrimitives.ReadUInt32LittleEndian(buf.AsSpan(3));
-            if (id == myId) return; // our own broadcast
-            byte type = buf[2];
-            var payload = buf.AsSpan(HeaderSize, n - HeaderSize);
+            // Anyone can claim to be our partner; a live call only ends via a sealed packet (or timeout).
+            if (!isCallPartner && peers.TryGetValue(id, out var gone)) LosePeer(gone, $"{gone.Name} closed WolfSpeak");
+            return;
+        }
+        if (type is not (TypeHello or TypeSecure or TypeCallRequest or TypeCallAccept or TypeCallDecline or TypeCallEnd))
+            return;
 
-            if (type == TypeBye)
+        var peer = Touch(id, ep, out bool isNew);
+        if (peer is null) return;
+        switch (type)
+        {
+            case TypeHello:
             {
-                if (peers.TryGetValue(id, out var gone)) LosePeer(gone, $"{gone.Name} closed WolfSpeak");
-                return;
+                if (payload.Length > MaxHelloPayload) break;
+                int sep = payload.IndexOf((byte)0);
+                var name = CleanName(Encoding.UTF8.GetString(sep < 0 ? payload : payload[..sep]));
+                if (!isCallPartner) peer.Name = name.Length > 0 ? name : peer.EndPoint.Address.ToString();
+                peer.Version = sep < 0 ? null : CleanVersion(Encoding.UTF8.GetString(payload[(sep + 1)..]));
+                peer.HelloSeen = true;
+                if (isNew) Send(BuildHello(), peer.EndPoint); // answer right away so they see us too
+                break;
             }
 
-            var peer = Touch(id, ep, out bool isNew);
-            switch (type)
-            {
-                case TypeHello:
-                {
-                    int sep = payload.IndexOf((byte)0);
-                    peer.Name = Encoding.UTF8.GetString(sep < 0 ? payload : payload[..sep]);
-                    peer.Version = sep < 0 ? null : Encoding.UTF8.GetString(payload[(sep + 1)..]);
-                    peer.HelloSeen = true;
-                    if (isNew) Send(BuildHello(), peer.EndPoint); // answer right away so they see us too
-                    break;
-                }
+            case TypeSecure:
+                OnSecurePacket(peer, ep, buf.AsSpan(0, n), samples);
+                break;
 
-                case TypeAudio:
-                {
-                    if (state != CallState.Connected || id != partnerId) break;
-                    int count = (payload.Length - 3) / 2;
-                    if (count <= 0 || count > FrameSamples) break;
-                    ushort seq = BinaryPrimitives.ReadUInt16LittleEndian(payload);
-                    bool end = (payload[2] & AudioFlagEnd) != 0;
-                    if (peer.HasSeq)
-                    {
-                        short gap = (short)(seq - peer.LastSeq);
-                        if (gap <= 0) break; // late/duplicate
-                        if (gap > 1 && gap < 100) Interlocked.Add(ref peer.Lost, gap - 1);
-                    }
-                    peer.LastSeq = seq;
-                    peer.HasSeq = true;
-                    Interlocked.Increment(ref peer.Received);
-                    double sq = 0;
-                    for (int i = 0; i < count; i++)
-                    {
-                        float v = BinaryPrimitives.ReadInt16LittleEndian(payload[(3 + i * 2)..]) / 32768f;
-                        samples[i] = v;
-                        sq += v * v;
-                    }
-                    peer.Level = Math.Clamp((float)(10 * Math.Log10(sq / count + 1e-12) + 60) / 50f, 0f, 1f);
-                    peer.Buffer.Write(samples.AsSpan(0, count), end);
-                    peer.LastAudio = Environment.TickCount64;
-                    break;
-                }
-
-                case TypePing:
-                    var pong = new byte[HeaderSize + payload.Length];
-                    WriteHeader(pong, TypePong);
-                    payload.CopyTo(pong.AsSpan(HeaderSize));
-                    Send(pong, peer.EndPoint);
-                    break;
-
-                case TypePong:
-                    if (payload.Length >= 8 && id == partnerId)
-                    {
-                        long sent = BinaryPrimitives.ReadInt64LittleEndian(payload);
-                        double rtt = (Stopwatch.GetTimestamp() - sent) * 1000.0 / Stopwatch.Frequency;
-                        RttMs = RttMs < 0 ? rtt : RttMs * 0.7 + rtt * 0.3;
-                    }
-                    break;
-
-                case TypeCallRequest or TypeCallAccept or TypeCallDecline or TypeCallEnd:
-                    OnCallPacket(type, peer, payload);
-                    break;
-            }
+            default:
+                OnCallPacket(type, peer, payload);
+                break;
         }
     }
 
-    Peer Touch(uint id, IPEndPoint ep, out bool isNew)
+    /// <summary>Finds or adds the peer. Null when the list is full (someone flooding fake peers).</summary>
+    Peer? Touch(uint id, IPEndPoint ep, out bool isNew)
     {
         isNew = false;
         if (!peers.TryGetValue(id, out var peer))
         {
+            if (peers.Count >= MaxPeers) return null;
             var created = new Peer
             {
                 Id = id,
@@ -676,13 +787,35 @@ public sealed class VoiceEngine : IDisposable
                 isNew = true;
             }
         }
+        // While connected, the partner's address and liveness only follow authenticated packets
+        // (see OnSecurePacket), so a spoofed packet can't redirect our audio or keep a dead call alive.
+        else if (state == CallState.Connected && id == partnerId)
+            return peer;
         else if (!peer.EndPoint.Equals(ep))
-        {
             peer.EndPoint = new IPEndPoint(ep.Address, ep.Port);
-        }
         peer.LastSeen = Environment.TickCount64;
         return peer;
     }
+
+    /// <summary>Names come from anyone on the network: no control/bidi-override characters, limited length.</summary>
+    static string CleanName(string raw)
+    {
+        var sb = new StringBuilder(MaxNameLength);
+        foreach (char c in raw)
+        {
+            if (sb.Length >= MaxNameLength) break;
+            var cat = char.GetUnicodeCategory(c);
+            if (char.IsControl(c) || cat is UnicodeCategory.Format or UnicodeCategory.LineSeparator
+                    or UnicodeCategory.ParagraphSeparator or UnicodeCategory.PrivateUse)
+                continue;
+            sb.Append(c);
+        }
+        if (sb.Length > 0 && char.IsHighSurrogate(sb[^1])) sb.Length--;
+        return sb.ToString().Trim();
+    }
+
+    static string CleanVersion(string raw) =>
+        raw.Length <= 20 && raw.All(c => c is >= '0' and <= '9' or '.') ? raw : "unknown";
 
     void LosePeer(Peer peer, string notice)
     {
@@ -716,16 +849,15 @@ public sealed class VoiceEngine : IDisposable
                         EndCall($"{p?.Name ?? "Your friend"} didn't answer");
                         break;
                     case CallState.Calling when p is not null:
-                        SendControl(TypeCallRequest, p); // UDP: keep repeating until answered
+                        SendControl(TypeCallRequest, p, requestPayload); // UDP: keep repeating until answered
                         break;
                     case CallState.Ringing when now - lastRequestMs > 3000:
                         EndCall($"Missed call from {p?.Name ?? "your friend"}");
                         break;
                     case CallState.Connected when p is not null && tick % 2 == 0:
-                        var ping = new byte[HeaderSize + 8];
-                        WriteHeader(ping, TypePing);
-                        BinaryPrimitives.WriteInt64LittleEndian(ping.AsSpan(HeaderSize), Stopwatch.GetTimestamp());
-                        Send(ping, p.EndPoint);
+                        Span<byte> stamp = stackalloc byte[8];
+                        BinaryPrimitives.WriteInt64LittleEndian(stamp, Stopwatch.GetTimestamp());
+                        SendSecure(TypePing, stamp, p);
                         break;
                 }
             }
@@ -766,7 +898,7 @@ public sealed class VoiceEngine : IDisposable
 
     byte[] BuildHello()
     {
-        var name = Encoding.UTF8.GetBytes((Name.Length > 32 ? Name[..32] : Name).Replace("\0", ""));
+        var name = Encoding.UTF8.GetBytes(CleanName(Name));
         var version = Encoding.UTF8.GetBytes(AppVersion);
         var pkt = new byte[HeaderSize + name.Length + 1 + version.Length];
         WriteHeader(pkt, TypeHello);
@@ -779,11 +911,35 @@ public sealed class VoiceEngine : IDisposable
         $"{p.Name} has {(p.Version is null ? "an older WolfSpeak" : $"WolfSpeak {p.Version}")}, you have {AppVersion}. " +
         "Update both to the same version to call.";
 
-    void SendControl(byte type, Peer to)
+    void SendControl(byte type, Peer to, byte[]? payload = null)
     {
-        var pkt = new byte[HeaderSize];
+        var pkt = new byte[HeaderSize + (payload?.Length ?? 0)];
         WriteHeader(pkt, type);
+        payload?.CopyTo(pkt, HeaderSize);
         Send(pkt, to.EndPoint);
+    }
+
+    /// <summary>Sends an in-call packet sealed with the call key (no-op outside a call).</summary>
+    void SendSecure(byte innerType, ReadOnlySpan<byte> payload, Peer to)
+    {
+        var s = session;
+        if (s is null) return;
+        var plain = new byte[1 + payload.Length];
+        plain[0] = innerType;
+        payload.CopyTo(plain.AsSpan(1));
+        var pkt = new byte[HeaderSize + CallCrypto.Overhead + plain.Length];
+        WriteHeader(pkt, TypeSecure);
+        s.Seal(pkt, HeaderSize, plain);
+        Send(pkt, to.EndPoint);
+    }
+
+    /// <summary>Same 6 digits on both PCs unless someone is relaying (and re-keying) the call in between.</summary>
+    static string SafetyCodeFor(string fingerprintA, string fingerprintB)
+    {
+        var (lo, hi) = string.CompareOrdinal(fingerprintA, fingerprintB) < 0 ? (fingerprintA, fingerprintB) : (fingerprintB, fingerprintA);
+        var hash = SHA256.HashData(Encoding.ASCII.GetBytes(lo + ":" + hi));
+        uint n = BinaryPrimitives.ReadUInt32LittleEndian(hash) % 1_000_000;
+        return $"{n / 1000:000} {n % 1000:000}";
     }
 
     void SendDecline(Peer to, byte reason)

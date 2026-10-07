@@ -14,13 +14,20 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      # Actions pinned to exact commits (tags can be moved); comments show the version.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
 
@@ -28,6 +35,12 @@ jobs:
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Passed via env, never pasted into the script, so a crafted input can't inject commands.
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          TAG_NAME: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          $version = if ("${{ github.event.inputs.version }}") { "${{ github.event.inputs.version }}" } else { "${{ github.ref_name }}" }
-          ./scripts/release.ps1 -Version $version -Upload -RepoUrl "https://github.com/${{ github.repository }}"
+          $version = if ($env:INPUT_VERSION) { $env:INPUT_VERSION } else { $env:TAG_NAME }
+          $version = $version.TrimStart("v")
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must look like 1.2.3 (got '$version')" }
+          ./scripts/release.ps1 -Version $version -Upload -RepoUrl "https://github.com/$env:REPOSITORY"

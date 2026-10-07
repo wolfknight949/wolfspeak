@@ -29,6 +29,7 @@ if (-not $Version) {
     $Version = ([xml](Get-Content $project)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
 }
 $Version = $Version.TrimStart("v")
+if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must look like 1.2.3 (got '$Version')" }
 
 function Invoke-Checked {
     & $args[0] $args[1..($args.Count - 1)]
