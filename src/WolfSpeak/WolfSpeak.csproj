@@ -11,7 +11,7 @@
     <RootNamespace>WolfSpeak</RootNamespace>
     <ApplicationIcon>assets\wolfspeak.ico</ApplicationIcon>
     <!-- Calls only connect between identical versions. Bump this for every release (CI overrides it from the git tag). -->
-    <Version>1.3.0</Version>
+    <Version>1.0.1</Version>
     <!-- Program.Main runs Velopack's install/update hooks before WPF starts -->
     <StartupObject>WolfSpeak.Program</StartupObject>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

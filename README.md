@@ -75,11 +75,11 @@ scripts/
 
 ### Releasing a new version
 
-1. Bump `<Version>` in `src/WolfSpeak/WolfSpeak.csproj` (e.g. `1.3.0`).
+1. Bump `<Version>` in `src/WolfSpeak/WolfSpeak.csproj` (e.g. `1.0.2`).
 2. Commit, then tag and push:
 
 ```bash
-git tag v1.3.0
+git tag v1.0.2
 ```
 
 ```bash
@@ -87,7 +87,7 @@ git push origin main --tags
 ```
 
 The **Release** GitHub Action builds the installer and publishes the GitHub Release. Every installed
-WolfSpeak picks it up within the hour (within 5 minutes when it sees a friend already on 1.3.0).
+WolfSpeak picks it up within the hour (within 5 minutes when it sees a friend already on 1.0.2).
 
 To build a release locally instead: `.\scripts\release.ps1` (add `-Upload` with `$env:GITHUB_TOKEN` set to publish it).
 Updates come from GitHub Releases, so the repository must be **public** (or teammates' builds can't fetch them).
