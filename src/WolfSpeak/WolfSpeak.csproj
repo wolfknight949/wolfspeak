@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>WolfSpeak</AssemblyName>
+    <RootNamespace>WolfSpeak</RootNamespace>
+    <ApplicationIcon>assets\wolfspeak.ico</ApplicationIcon>
+    <!-- Calls only connect between identical versions. Bump this for every release (CI overrides it from the git tag). -->
+    <Version>1.2.0</Version>
+    <!-- Program.Main runs Velopack's install/update hooks before WPF starts -->
+    <StartupObject>WolfSpeak.Program</StartupObject>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Product>WolfSpeak</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
+    <Resource Include="assets\wolfspeak.ico" />
+    <Resource Include="assets\wolfspeak-icon.png" />
+    <!-- WinForms is only used for the tray icon; keep its namespaces out of global scope -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+</Project>
