@@ -48,6 +48,27 @@
                            Margin="7,2,0,0" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button x:Name="UpdateReadyButton" Visibility="Collapsed" Margin="0,0,6,0" Cursor="Hand" VerticalAlignment="Center"
+                        WindowChrome.IsHitTestVisibleInChrome="True" Click="OnUpdateReadyClick" AutomationProperties.Name="Restart to update">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" CornerRadius="12" Padding="10,4" Background="#2234D399"
+                                    BorderBrush="#6634D399" BorderThickness="1">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE896;" FontFamily="{StaticResource IconFont}" FontSize="11"
+                                               Foreground="{StaticResource TalkBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <ContentPresenter VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="#3334D399"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <TextBlock Text="Update" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TalkBrush}"/>
+                </Button>
                 <Button AutomationProperties.Name="Settings" Style="{StaticResource IconButton}" Content="&#xE713;" ToolTip="Settings"
                         WindowChrome.IsHitTestVisibleInChrome="True" Click="OnSettingsClick"/>
                 <Button AutomationProperties.Name="Minimize" Style="{StaticResource IconButton}" Content="&#xE921;" FontSize="10" ToolTip="Minimize"

@@ -46,6 +46,7 @@ public partial class MainWindow : Window
     readonly DispatcherTimer deviceDebounce = new() { Interval = TimeSpan.FromMilliseconds(700) };
     readonly DispatcherTimer updateTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     readonly Updater updater = new();
+    bool installingUpdate;
     bool quitting;
 
     int shownPeerVersion = -1;
@@ -121,6 +122,12 @@ public partial class MainWindow : Window
                 return;
             }
             frameTimer.Stop();
+            // Quitting with an update waiting: install it quietly, no restart.
+            if (updater.Ready is not null && !installingUpdate)
+            {
+                try { updater.ApplyAfterExit(restart: false, []); }
+                catch (Exception ex) { Log.Write("Could not apply update on quit", ex); }
+            }
             SaveWindowPosition();
             settings.Save();
             deviceWatcher.Dispose();
@@ -240,7 +247,7 @@ public partial class MainWindow : Window
     {
         bool friendAhead = engine.Peers.Any(p => Updater.IsNewerThanUs(p.Version));
         if (!await updater.CheckAsync(urgent: friendAhead)) return;
-        InstallUpdateIfIdle();
+        OnUpdateReady();
     }
 
     async void OnCheckUpdatesClick(object sender, RoutedEventArgs e)
@@ -260,10 +267,9 @@ public partial class MainWindow : Window
 
         if (ready)
         {
-            ShowUpdateStatus(engine.State == CallState.Idle
-                ? $"Installing {updater.Ready!.Version}… WolfSpeak will restart in a moment."
-                : $"{updater.Ready!.Version} downloaded — it installs when your call ends.");
-            InstallUpdateIfIdle();
+            ShowUpdateStatus($"WolfSpeak {updater.Ready!.Version} is ready. Press Update at the top to restart into it, " +
+                             "or it installs next time you quit.");
+            OnUpdateReady();
         }
         else
             ShowUpdateStatus(updater.LastError ?? $"You're up to date (v{VoiceEngine.AppVersion}).");
@@ -275,21 +281,39 @@ public partial class MainWindow : Window
         UpdateStatus.Visibility = Visibility.Visible;
     }
 
-    /// <summary>Restarts into the downloaded update, unless a call is going (then the update timer retries).</summary>
-    void InstallUpdateIfIdle()
+    /// <summary>
+    /// An update is downloaded: show the Update button and tell the user once. Nothing restarts on its own —
+    /// the user picks the moment (or it installs quietly when they quit).
+    /// </summary>
+    void OnUpdateReady()
     {
-        if (updater.Ready is null || engine.State != CallState.Idle || quitting) return; // never interrupt a call
-
+        if (updater.Ready is null || UpdateReadyButton.Visibility == Visibility.Visible) return;
         updateTimer.Stop();
-        Log.Write($"Installing update {updater.Ready!.Version}");
+        var version = updater.Ready.Version;
+        UpdateReadyButton.ToolTip = $"WolfSpeak {version} is ready — click to restart into it (takes a few seconds)";
+        UpdateReadyButton.Visibility = Visibility.Visible;
+        ShowNotice($"WolfSpeak {version} is available. Press Update at the top when you're ready (or it installs when you quit).");
+    }
+
+    void OnUpdateReadyClick(object sender, RoutedEventArgs e)
+    {
+        if (updater.Ready is null) return;
+        if (engine.State != CallState.Idle)
+        {
+            ShowToast("Finish your call first — updating restarts WolfSpeak.");
+            return;
+        }
+        Log.Write($"Installing update {updater.Ready.Version}");
         try
         {
-            updater.ApplyAfterExit(IsVisible ? [] : [Autostart.TrayArgument]);
+            updater.ApplyAfterExit(restart: true, IsVisible ? [] : [Autostart.TrayArgument]);
+            installingUpdate = true;
             Quit();
         }
         catch (Exception ex)
         {
             Log.Write("Could not apply update", ex);
+            ShowToast("Couldn't start the update: " + ex.Message);
         }
     }
 

@@ -65,9 +65,9 @@ public sealed class Updater
         finally { busy = false; }
     }
 
-    /// <summary>Hands off to the Velopack updater, which installs once this process has exited and relaunches.</summary>
-    public void ApplyAfterExit(string[] restartArgs) =>
-        manager!.WaitExitThenApplyUpdates(Ready!, silent: true, restart: true, restartArgs);
+    /// <summary>Hands off to the Velopack updater, which installs once this process has exited (and optionally relaunches).</summary>
+    public void ApplyAfterExit(bool restart, string[] restartArgs) =>
+        manager!.WaitExitThenApplyUpdates(Ready!, silent: true, restart, restartArgs);
 
     public static bool IsNewerThanUs(string? version) =>
         Version.TryParse(version, out var v) && Version.TryParse(VoiceEngine.AppVersion, out var ours) && v > ours;

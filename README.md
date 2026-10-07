@@ -13,8 +13,9 @@ No servers, no accounts, no compression — your voice goes straight from your P
 
 Download **`WolfSpeak-win-Setup.exe`** from the
 [latest release](https://github.com/wolfknight949/wolfspeak/releases/latest) and run it — no admin needed,
-and it installs the .NET 10 Desktop Runtime too if you don't have it. That's it: WolfSpeak **updates itself**
-from then on (in the background, never during a call).
+and it installs the .NET 10 Desktop Runtime too if you don't have it. From then on WolfSpeak downloads updates in the background and shows an **Update** button at the top
+when one is ready — click it when it suits you (it restarts in a few seconds), or it installs next time you
+quit. It never restarts on its own or interrupts a call. Settings → **Check for updates** looks right away.
 
 Calls only connect when both of you run the **same version** — a friend on a different version shows an
 amber "Different version" note in your pack. Auto-update keeps everyone in sync; it checks sooner when it
@@ -75,13 +76,13 @@ scripts/
 
 ### Releasing a new version
 
-1. Bump `<Version>` in `src/WolfSpeak.csproj` (e.g. `1.0.4`).
-2. Add a `## [1.0.4] - <date>` section to [`CHANGELOG.md`](CHANGELOG.md) — it becomes the release notes
+1. Bump `<Version>` in `src/WolfSpeak.csproj` (e.g. `1.0.5`).
+2. Add a `## [1.0.5] - <date>` section to [`CHANGELOG.md`](CHANGELOG.md) — it becomes the release notes
    (the release fails without it).
 3. Commit, then tag and push:
 
 ```bash
-git tag v1.0.4
+git tag v1.0.5
 ```
 
 ```bash
@@ -89,7 +90,8 @@ git push origin main --tags
 ```
 
 The **Release** GitHub Action builds the installer and publishes the GitHub Release. Every installed
-WolfSpeak picks it up within the hour (within 5 minutes when it sees a friend already on 1.0.4).
+WolfSpeak downloads it within the hour (within 5 minutes when it sees a friend already on 1.0.5) and shows
+the **Update** button.
 
 To build a release locally instead: `.\scripts\release.ps1` (add `-Upload` with `$env:GITHUB_TOKEN` set to publish it).
 Updates come from GitHub Releases, so the repository must be **public** (or teammates' builds can't fetch them).

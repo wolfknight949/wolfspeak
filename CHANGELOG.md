@@ -3,6 +3,14 @@
 Every release needs an entry here before it's tagged — the release build copies the matching section
 into the GitHub release notes (and fails if there isn't one).
 
+## [1.0.4] - 2026-10-07
+
+### Changed
+- Updates no longer restart WolfSpeak by themselves. When a new version is downloaded, an **Update** button
+  appears at the top — click it when it suits you. Clicking during a call asks you to hang up first.
+- If you quit WolfSpeak with an update waiting, it installs quietly so the next start is up to date.
+- **Check for updates** now just downloads and shows the Update button instead of restarting right away.
+
 ## [1.0.3] - 2026-10-07
 
 ### Added
