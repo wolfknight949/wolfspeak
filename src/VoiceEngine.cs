@@ -47,7 +47,7 @@ public enum CallState { Idle, Calling, Ringing, Connected }
 ///     Audio: seq(2) + flags(1) + 240 x int16   Ping / Pong: timestamp(8)   CallEnd / Bye: (none)
 /// Discovery is open by nature; once a call is up, only packets sealed with the call key are accepted.
 /// </summary>
-public sealed class VoiceEngine : IDisposable
+public sealed partial class VoiceEngine : IDisposable
 {
     public const int Port = 50505;
     public const int SampleRate = 48000;
@@ -135,7 +135,7 @@ public sealed class VoiceEngine : IDisposable
     public string? PartnerFingerprint { get; private set; }
     public string MyFingerprint => CallCrypto.Fingerprint(identity.PublicKey);
     /// <summary>Safety code both sides see; if they match, nobody is in the middle of the call.</summary>
-    public string? SafetyCode => PartnerFingerprint is null ? null : SafetyCodeFor(MyFingerprint, PartnerFingerprint);
+    public string? SafetyCode => IsDemo ? DemoSafetyCode : PartnerFingerprint is null ? null : SafetyCodeFor(MyFingerprint, PartnerFingerprint);
     public long ConnectedAtMs { get; private set; }
     /// <summary>Smoothed round-trip time to the partner in ms, or -1 if unknown.</summary>
     public double RttMs { get; private set; } = -1;
@@ -200,7 +200,7 @@ public sealed class VoiceEngine : IDisposable
     }
     volatile bool loopbackEnabled;
 
-    public VoiceEngine()
+    public VoiceEngine(bool demo = false)
     {
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)
         {
@@ -212,7 +212,9 @@ public sealed class VoiceEngine : IDisposable
         socket.IOControl(SIO_UDP_CONNRESET, [0, 0, 0, 0], null);
         // DSCP EF (46): marks packets as real-time voice for routers/switches that honour QoS.
         try { socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.TypeOfService, 0xB8); } catch { }
-        socket.Bind(new IPEndPoint(IPAddress.Any, Port));
+        IsDemo = demo;
+        // Demo mode (screenshots): no LAN traffic at all — a throwaway loopback port and no hello broadcasts.
+        socket.Bind(demo ? new IPEndPoint(IPAddress.Loopback, 0) : new IPEndPoint(IPAddress.Any, Port));
 
         voiceVolume = new VolumeSampleProvider(voiceMixer);
         loopback.TargetSamples = bufferSamples;
@@ -223,7 +225,7 @@ public sealed class VoiceEngine : IDisposable
 
         rxThread = new Thread(ReceiveLoop) { IsBackground = true, Priority = ThreadPriority.AboveNormal, Name = "WolfSpeak RX" };
         rxThread.Start();
-        tickTimer = new System.Threading.Timer(_ => Tick(), null, 0, TickMs);
+        tickTimer = new System.Threading.Timer(_ => Tick(), null, demo ? Timeout.Infinite : 0, demo ? Timeout.Infinite : TickMs);
     }
 
     public void PlaySound(SoundKind kind) => sounds.Play(kind);
@@ -960,6 +962,7 @@ public sealed class VoiceEngine : IDisposable
 
     void Send(byte[] pkt, IPEndPoint to)
     {
+        if (IsDemo) return; // demo friends are fake addresses — never put anything on the network
         try { socket.SendTo(pkt, to); }
         catch (SocketException) { }
         catch (ObjectDisposedException) { }

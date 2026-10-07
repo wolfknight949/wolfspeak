@@ -28,8 +28,12 @@ public sealed class Settings
     static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WolfSpeak", "settings.json");
 
+    /// <summary>Demo mode: fresh defaults, never read or written (your real settings stay untouched).</summary>
+    public static bool DemoMode { get; set; }
+
     public static Settings Load()
     {
+        if (DemoMode) return new() { Name = "Fenrir" };
         try
         {
             if (File.Exists(FilePath))
@@ -41,6 +45,7 @@ public sealed class Settings
 
     public void Save()
     {
+        if (DemoMode) return;
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);

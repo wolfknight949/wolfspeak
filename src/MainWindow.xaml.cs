@@ -63,10 +63,11 @@ public partial class MainWindow : Window
     int loadingDotCount = 3;
     bool searchAnimating;
 
-    public MainWindow(VoiceEngine engine)
+    public MainWindow(VoiceEngine engine, DemoScene? demo = null)
     {
         this.engine = engine;
         InitializeComponent();
+        if (demo == DemoScene.Settings) Loaded += (_, _) => ToggleSettings(true);
 
         PeerList.ItemsSource = peers;
         IpList.ItemsSource = savedIps;
@@ -82,7 +83,7 @@ public partial class MainWindow : Window
         AboutVersion.Text = "WolfSpeak " + VoiceEngine.AppVersion;
         Title = $"WolfSpeak {VoiceEngine.AppVersion}";
 
-        var ips = VoiceEngine.LocalAddresses();
+        var ips = engine.IsDemo ? [IPAddress.Parse("192.168.1.42")] : VoiceEngine.LocalAddresses();
         HomeMeSub.Text = ips.Count > 0 ? $"Online · {ips[0]}" : "No network connection";
         AboutText.Text = $"Your address: {string.Join(", ", ips)}\nUDP port {VoiceEngine.Port} · direct, no servers";
 
@@ -92,7 +93,7 @@ public partial class MainWindow : Window
         frameTimer.Tick += (_, _) => OnFrame();
         frameTimer.Start();
         updateTimer.Tick += (_, _) => OnUpdateTimer();
-        updateTimer.Start();
+        if (!engine.IsDemo) updateTimer.Start();
 
         tray.OpenRequested += ShowFromTray;
         tray.ToggleMuteRequested += ToggleMute;
@@ -356,6 +357,13 @@ public partial class MainWindow : Window
         refreshingDevices = true;
         try
         {
+            if (engine.IsDemo)
+            {
+                MicBox.ItemsSource = new[] { new DeviceItem(null, "Default · Headset Microphone") };
+                OutBox.ItemsSource = new[] { new DeviceItem(null, "Default · Headphones") };
+                MicBox.SelectedIndex = OutBox.SelectedIndex = 0;
+                return;
+            }
             using var en = new MMDeviceEnumerator();
             Fill(MicBox, en, DataFlow.Capture, settings.MicId);
             Fill(OutBox, en, DataFlow.Render, settings.OutputId);
@@ -551,6 +559,7 @@ public partial class MainWindow : Window
     void RestartAudio()
     {
         if (loading) return;
+        if (engine.IsDemo) { UpdateDelayInfo(); return; } // no real devices in demo mode
         try
         {
             if (engine.StartAudio(settings.MicId, settings.OutputId) is { } note)
@@ -568,6 +577,7 @@ public partial class MainWindow : Window
 
     void OnFrame()
     {
+        if (engine.IsDemo) engine.DemoTick();
         long now = Environment.TickCount64;
         var state = engine.State;
         if (state != shownState) OnStateChanged(shownState, state);

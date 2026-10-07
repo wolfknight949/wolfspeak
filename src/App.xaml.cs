@@ -31,6 +31,15 @@ public partial class App : Application
             args.SetObserved();
         };
 
+        // Demo mode (README screenshots): fake friends and call, no network, settings untouched.
+        if (VoiceEngine.TryParseDemoArgs(e.Args, out var scene))
+        {
+            Settings.DemoMode = true;
+            engine = VoiceEngine.CreateDemo(scene);
+            new MainWindow(engine, scene).Show();
+            return;
+        }
+
         // Already running (probably in the tray)? Ask that instance to show itself and leave.
         instanceMutex = new Mutex(true, InstanceMutexName, out bool firstInstance);
         if (!firstInstance)

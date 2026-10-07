@@ -1,0 +1,48 @@
+<!doctype html>
+<!-- 1280x640 social preview for GitHub (Settings → Social preview). Rendered by scripts/screenshots.ps1. -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 1280px; height: 640px; overflow: hidden; }
+  body {
+    font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif;
+    color: #E9EDF5;
+    background:
+      radial-gradient(ellipse 700px 500px at 78% 10%, rgba(99, 102, 241, .35), transparent 70%),
+      radial-gradient(ellipse 500px 400px at 10% 100%, rgba(34, 211, 238, .14), transparent 70%),
+      linear-gradient(180deg, #0D111A, #090C12);
+    position: relative;
+  }
+  .text { position: absolute; left: 84px; top: 0; bottom: 0; width: 600px; display: flex; flex-direction: column; justify-content: center; }
+  .brand { display: flex; align-items: center; gap: 22px; }
+  .brand img { width: 104px; height: 104px; }
+  h1 { font-size: 76px; font-weight: 600; margin: 0; letter-spacing: -1px; }
+  .tag { font-size: 30px; line-height: 1.35; color: #C9D0DE; margin: 30px 0 34px; }
+  .tag b { background: linear-gradient(90deg, #22D3EE, #6366F1 60%, #A855F7); -webkit-background-clip: text; color: transparent; }
+  .chips { display: flex; gap: 10px; }
+  .chip { font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif; font-size: 17px; color: #8C95A9;
+          border: 1px solid #222A3B; background: #0F1520; border-radius: 999px; padding: 6px 15px; white-space: nowrap; }
+  .chip i { font-style: normal; color: #34D399; margin-right: 8px; }
+  .shot { position: absolute; width: 300px; border-radius: 10px; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06); }
+  .back { left: 720px; top: 92px; transform: rotate(-4deg); opacity: .92; }
+  .front { left: 930px; top: 60px; transform: rotate(3deg); }
+</style>
+</head>
+<body>
+  <div class="text">
+    <div class="brand">
+      <img src="../src/assets/wolfspeak.png" alt="">
+      <h1>WolfSpeak</h1>
+    </div>
+    <p class="tag">Voice calls for your LAN in <b>~40 ms</b>.<br>No servers. No accounts. No codec.</p>
+    <div class="chips">
+      <span class="chip"><i>●</i>Direct PC to PC</span>
+      <span class="chip"><i>●</i>End-to-end encrypted</span>
+      <span class="chip"><i>●</i>Auto-updates</span>
+    </div>
+  </div>
+  <img class="shot back" src="screenshots/home.png" alt="">
+  <img class="shot front" src="screenshots/call.png" alt="">
+</body>
+</html>
