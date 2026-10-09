@@ -36,7 +36,29 @@ public partial class App : Application
         {
             Settings.DemoMode = true;
             engine = VoiceEngine.CreateDemo(scene);
-            new MainWindow(engine, scene).Show();
+            var demoWindow = new MainWindow(engine, scene);
+            demoWindow.Show();
+            int snapshotIndex = Array.IndexOf(e.Args, "--snapshot");
+            if (snapshotIndex >= 0 && snapshotIndex + 1 < e.Args.Length)
+            {
+                int hourIndex = Array.IndexOf(e.Args, "--snapshot-hour");
+                if (hourIndex >= 0 && hourIndex + 1 < e.Args.Length && int.TryParse(e.Args[hourIndex + 1], out int hour) && hour is >= 0 and <= 23)
+                    demoWindow.SetSnapshotHour(hour);
+                int delayIndex = Array.IndexOf(e.Args, "--snapshot-delay");
+                int timeIndex = Array.IndexOf(e.Args, "--snapshot-time");
+                if (timeIndex >= 0 && timeIndex + 1 < e.Args.Length && double.TryParse(e.Args[timeIndex + 1], out double seconds) && double.IsFinite(seconds) && seconds >= 0)
+                    demoWindow.SetSnapshotTime(seconds);
+                int delay = delayIndex >= 0 && delayIndex + 1 < e.Args.Length && int.TryParse(e.Args[delayIndex + 1], out int milliseconds)
+                    ? Math.Clamp(milliseconds, 500, 10000) : 2000;
+                var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(delay) };
+                timer.Tick += (_, _) =>
+                {
+                    timer.Stop();
+                    demoWindow.SaveDemoSnapshot(e.Args[snapshotIndex + 1]);
+                    Shutdown();
+                };
+                timer.Start();
+            }
             return;
         }
 

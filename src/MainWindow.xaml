@@ -2,49 +2,38 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:WolfSpeak"
-        Title="WolfSpeak" Width="420" Height="720" MinWidth="380" MinHeight="600"
+        Title="WolfSpeak" Width="420" Height="720" MinWidth="420" MaxWidth="420" MinHeight="600"
         Icon="assets/wolfspeak.ico"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BgBrush}" Foreground="{StaticResource TextBrush}"
+        Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextBrush}"
         FontFamily="{StaticResource UiFont}" FontSize="13"
         UseLayoutRounding="True" TextOptions.TextFormattingMode="Ideal">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="50" ResizeBorderThickness="6" GlassFrameThickness="0"
+        <WindowChrome CaptionHeight="58" ResizeBorderThickness="0,6,0,6" GlassFrameThickness="0"
                       CornerRadius="0" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 
-    <Grid x:Name="Root">
-        <Grid.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                <GradientStop Color="#0D111A" Offset="0"/>
-                <GradientStop Color="#090C12" Offset="1"/>
-            </LinearGradientBrush>
-        </Grid.Background>
+    <Grid x:Name="Root" Background="{DynamicResource BgBrush}">
+
         <Grid.RowDefinitions>
-            <RowDefinition Height="50"/>
+            <RowDefinition Height="58"/><RowDefinition x:Name="SceneryRow" Height="244"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- moonlight glow -->
-        <Ellipse Grid.RowSpan="2" Width="520" Height="420" VerticalAlignment="Top" Margin="0,-170,0,0"
-                 IsHitTestVisible="False" Opacity="0.55">
-            <Ellipse.Fill>
-                <RadialGradientBrush>
-                    <GradientStop Color="#3A6366F1" Offset="0"/>
-                    <GradientStop Color="#156366F1" Offset="0.5"/>
-                    <GradientStop Color="#006366F1" Offset="1"/>
-                </RadialGradientBrush>
-            </Ellipse.Fill>
-        </Ellipse>
-
+        <Border Grid.Row="0" Background="{DynamicResource SkyBrush}"/>
+        <local:HeaderStars x:Name="TitleStars" Grid.Row="0" IsHitTestVisible="False" ClipToBounds="True"/>
+        <Grid x:Name="SceneryHeader" Grid.Row="1" ClipToBounds="True" IsHitTestVisible="False">
+            <local:PixelScenery x:Name="Scenery"/>
+            <Rectangle Fill="{DynamicResource SceneryComfortBrush}"/>
+        </Grid>
         <!-- ======================================================= title bar -->
-        <DockPanel Margin="16,0,8,0">
+        <DockPanel Margin="16,0,8,0" TextElement.Foreground="{DynamicResource HeaderTextBrush}">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Image Source="{StaticResource WolfHeadsetIcon}" Width="32" Height="32"/>
+                <Image Source="{DynamicResource ShortcutLogo}" Width="34" Height="34" AutomationProperties.Name="WolfSpeak wolf logo"/>
                 <TextBlock Text="WolfSpeak" FontFamily="{StaticResource DisplayFont}" FontSize="16" FontWeight="SemiBold"
                            Margin="11,0,0,1" VerticalAlignment="Center"/>
-                <TextBlock x:Name="TitleVersion" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}"
+                <TextBlock x:Name="TitleVersion" FontSize="11.5" Foreground="{DynamicResource HeaderSubBrush}"
                            Margin="7,2,0,0" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -56,7 +45,7 @@
                                     BorderBrush="#6634D399" BorderThickness="1">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE896;" FontFamily="{StaticResource IconFont}" FontSize="11"
-                                               Foreground="{StaticResource TalkBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                               Foreground="{DynamicResource TalkBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                     <ContentPresenter VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
@@ -67,19 +56,19 @@
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Button.Template>
-                    <TextBlock Text="Update" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TalkBrush}"/>
+                    <TextBlock Text="Update" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TalkBrush}"/>
                 </Button>
-                <Button AutomationProperties.Name="Settings" Style="{StaticResource IconButton}" Content="&#xE713;" ToolTip="Settings"
+                <Button AutomationProperties.Name="Settings" Style="{StaticResource IconButton}" Content="&#xE713;" ToolTip="Settings" Foreground="{DynamicResource HeaderSubBrush}"
                         WindowChrome.IsHitTestVisibleInChrome="True" Click="OnSettingsClick"/>
-                <Button AutomationProperties.Name="Minimize" Style="{StaticResource IconButton}" Content="&#xE921;" FontSize="10" ToolTip="Minimize"
+                <Button AutomationProperties.Name="Minimize" Style="{StaticResource IconButton}" Content="&#xE921;" FontSize="10" ToolTip="Minimize" Foreground="{DynamicResource HeaderSubBrush}"
                         WindowChrome.IsHitTestVisibleInChrome="True" Click="OnMinimizeClick"/>
-                <Button AutomationProperties.Name="Close" Style="{StaticResource CloseButton}" Content="&#xE8BB;" FontSize="10" ToolTip="Close"
+                <Button AutomationProperties.Name="Close" Style="{StaticResource CloseButton}" Content="&#xE8BB;" FontSize="10" ToolTip="Close" Foreground="{DynamicResource HeaderSubBrush}"
                         WindowChrome.IsHitTestVisibleInChrome="True" Click="OnCloseClick"/>
             </StackPanel>
         </DockPanel>
 
         <!-- ======================================================= HOME -->
-        <Grid x:Name="HomeView" Grid.Row="1" Margin="16,6,16,16">
+        <Grid x:Name="HomeView" Grid.Row="2" Margin="24,10,24,20">
             <Grid.RenderTransform><TranslateTransform/></Grid.RenderTransform>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -89,7 +78,7 @@
             </Grid.RowDefinitions>
 
             <!-- you + your audio -->
-            <Border Style="{StaticResource Card}" Padding="16,16,16,14">
+            <Border Padding="4,10,4,12">
               <StackPanel>
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -100,26 +89,325 @@
                         <Ellipse x:Name="HomeMeAvatar" Fill="Gray"/>
                         <TextBlock x:Name="HomeMeInitials" Foreground="White" FontWeight="SemiBold" FontSize="18"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        <Ellipse Width="15" Height="15" Fill="{StaticResource TalkBrush}" Stroke="{StaticResource CardBrush}"
+                        <Ellipse Width="15" Height="15" Fill="{DynamicResource TalkBrush}" Stroke="{DynamicResource CardBrush}"
                                  StrokeThickness="3" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
                     </Grid>
                     <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                         <TextBlock x:Name="HomeMeName" FontSize="17" FontWeight="SemiBold" FontFamily="{StaticResource DisplayFont}"
                                    TextTrimming="CharacterEllipsis"/>
-                        <TextBlock x:Name="HomeMeSub" FontSize="12" Foreground="{StaticResource SubTextBrush}" Margin="0,2,0,8"/>
+                        <TextBlock x:Name="HomeMeSub" FontSize="12" Foreground="{DynamicResource SubTextBrush}" Margin="0,2,0,8"/>
                         <StackPanel Orientation="Horizontal" ToolTip="Your microphone level">
                             <TextBlock Text="&#xE720;" FontFamily="{StaticResource IconFont}" FontSize="11"
-                                       Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                       Foreground="{DynamicResource FaintTextBrush}" VerticalAlignment="Center" Margin="0,0,7,0"/>
                             <Grid x:Name="HomeMeterHost" Width="150" Height="5" VerticalAlignment="Center">
                                 <Border CornerRadius="2.5" Background="#232B3C"/>
                                 <Border x:Name="HomeMeterFill" CornerRadius="2.5" HorizontalAlignment="Left" Width="0"
-                                        Background="{StaticResource AccentHBrush}"/>
+                                        Background="{DynamicResource AccentHBrush}"/>
                             </Grid>
                         </StackPanel>
                     </StackPanel>
                 </Grid>
 
-                <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,14,0,12"/>
+
+              </StackPanel>
+            </Border>
+
+            <DockPanel Grid.Row="1" Margin="4,22,4,10">
+                <TextBlock Text="YOUR PACK" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
+                <Border CornerRadius="8" Background="#1E2638" Padding="7,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="CountText" Text="0" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}"/>
+                </Border>
+                <TextBlock Text="on this network" FontSize="11" Foreground="{DynamicResource FaintTextBrush}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </DockPanel>
+
+            <Grid Grid.Row="2">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="PeerList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type local:PeerVm}">
+                                <Border x:Name="card" Background="Transparent" BorderBrush="Transparent"
+                                        BorderThickness="0" CornerRadius="10" Padding="4,14" Margin="0,0,0,4">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid Width="42" Height="42">
+                                            <Ellipse Fill="{Binding AvatarBrush}"/>
+                                            <TextBlock Text="{Binding Initials}" Foreground="White" FontWeight="SemiBold" FontSize="14"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Address}" FontSize="12" Foreground="{DynamicResource FaintTextBrush}" Margin="0,2,0,0"/>
+                                            <TextBlock Text="{Binding VersionWarning}" Visibility="{Binding VersionWarningVisibility}"
+                                                       FontSize="11.5" Foreground="{StaticResource AmberBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Style="{StaticResource CallButton}" Content="Call" Tag="{Binding}"
+                                                Click="OnCallPeerClick" AutomationProperties.Name="{Binding Name, StringFormat=Call {0}}"/>
+                                    </Grid>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <Trigger SourceName="card" Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="card" Property="BorderBrush" Value="{DynamicResource LineHiBrush}"/>
+                                        <Setter TargetName="card" Property="Background" Value="{DynamicResource CardHiBrush}"/>
+                                    </Trigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- empty state -->
+                <StackPanel x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,-10,0,0">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,5">
+                        <Grid Width="28" Height="28" Margin="0,0,8,0" VerticalAlignment="Center">
+                            <Ellipse x:Name="SearchPulse1" Stroke="{DynamicResource CyanBrush}" StrokeThickness="1.5"
+                                     RenderTransformOrigin="0.5,0.5" Opacity="0">
+                                <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
+                            </Ellipse>
+                            <Ellipse x:Name="SearchPulse2" Stroke="#B5A4CD" StrokeThickness="1.5"
+                                     RenderTransformOrigin="0.5,0.5" Opacity="0">
+                                <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
+                            </Ellipse>
+                            <Ellipse Width="6" Height="6" Fill="{DynamicResource CyanBrush}"/>
+                        </Grid>
+                        <TextBlock Text="Looking for your pack" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="LoadingDots" Text="..." Width="22" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="Ask your friend to open WolfSpeak&#x0a;on the same network — they'll pop up here."
+                               TextAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" FontSize="12.5"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- call by IP -->
+            <Expander Grid.Row="3" Header="Call by IP" Margin="4,12,4,0" Foreground="{DynamicResource SubTextBrush}" IsExpanded="False"><Border Padding="0,10,0,0">
+                <StackPanel>
+                    <TextBlock Text="Friend not showing up? Call their IP directly" FontSize="12" Foreground="{DynamicResource SubTextBrush}" Margin="2,0,0,8"/>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource CallButton}" Content="Call" Height="38" Margin="8,0,0,0"
+                                Click="OnCallIpClick" AutomationProperties.Name="Call IP"/>
+                        <TextBox x:Name="IpBox" Style="{StaticResource DarkTextBox}" Tag="e.g. 192.168.1.20" KeyDown="OnIpKeyDown"/>
+                    </DockPanel>
+                </StackPanel>
+            </Border></Expander>
+        </Grid>
+
+        <!-- ======================================================= RINGING / CALLING -->
+        <Grid x:Name="RingView" Grid.Row="2" Visibility="Collapsed" Margin="16,0,16,30">
+            <Grid.RenderTransform><TranslateTransform/></Grid.RenderTransform>
+            <StackPanel VerticalAlignment="Center">
+                <Grid Width="250" Height="250">
+                    <Ellipse x:Name="RingPulse1" Stroke="{DynamicResource CyanBrush}" StrokeThickness="2" RenderTransformOrigin="0.5,0.5" Opacity="0">
+                        <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
+                    </Ellipse>
+                    <Ellipse x:Name="RingPulse2" Stroke="#75658A" StrokeThickness="2" RenderTransformOrigin="0.5,0.5" Opacity="0">
+                        <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
+                    </Ellipse>
+                    <Ellipse x:Name="RingPulse3" Stroke="#B5A4CD" StrokeThickness="2" RenderTransformOrigin="0.5,0.5" Opacity="0">
+                        <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
+                    </Ellipse>
+                    <Ellipse x:Name="RingAvatar" Width="124" Height="124" Fill="Gray">
+                        <Ellipse.Effect>
+                            <DropShadowEffect BlurRadius="40" ShadowDepth="0" Color="#75658A" Opacity="0.7"/>
+                        </Ellipse.Effect>
+                    </Ellipse>
+                    <TextBlock x:Name="RingInitials" Foreground="White" FontWeight="SemiBold" FontSize="40"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+                <TextBlock x:Name="RingName" HorizontalAlignment="Center" FontFamily="{StaticResource DisplayFont}" FontSize="28"
+                           FontWeight="SemiBold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="RingStatus" HorizontalAlignment="Center" FontSize="14" Foreground="{DynamicResource SubTextBrush}" Margin="0,4,0,0"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,44,0,0">
+                    <StackPanel>
+                        <Button Style="{StaticResource RoundButton}" Width="70" Height="70" FontSize="24"
+                                Background="#E11D48" Content="&#xE778;" Click="OnHangUpClick" AutomationProperties.Name="Decline"/>
+                        <TextBlock x:Name="DeclineLabel" Text="Decline" HorizontalAlignment="Center" Margin="0,8,0,0"
+                                   FontSize="12.5" Foreground="{DynamicResource SubTextBrush}"/>
+                    </StackPanel>
+                    <StackPanel x:Name="AcceptPanel" Margin="64,0,0,0">
+                        <Button Style="{StaticResource RoundButton}" Width="70" Height="70" FontSize="24" Content="&#xE717;"
+                                Click="OnAcceptClick" AutomationProperties.Name="Accept">
+                            <Button.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#9FC6AF" Offset="0"/>
+                                    <GradientStop Color="#059669" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Button.Background>
+                            <Button.Effect>
+                                <DropShadowEffect BlurRadius="24" ShadowDepth="0" Color="#9FC6AF" Opacity="0.6"/>
+                            </Button.Effect>
+                        </Button>
+                        <TextBlock Text="Accept" HorizontalAlignment="Center" Margin="0,8,0,0" FontSize="12.5" Foreground="{DynamicResource SubTextBrush}"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+
+        <!-- ======================================================= CONNECTED -->
+        <Grid x:Name="CallView" Grid.Row="2" Visibility="Collapsed" Margin="24,14,24,20">
+            <Grid.RenderTransform><TranslateTransform/></Grid.RenderTransform>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <DockPanel>
+                <Border Style="{StaticResource Pill}">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="7" Height="7" Fill="{DynamicResource TalkBrush}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="CallTimer" Text="Connected · 00:00" FontSize="11.5" Foreground="{DynamicResource SubTextBrush}" Margin="7,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Pill}" Margin="8,0,0,0"
+                        ToolTip="Encrypted call. Read this code to each other: if it matches on both PCs, nobody is listening in between.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72E;" FontFamily="{StaticResource IconFont}" FontSize="11"
+                                   Foreground="{DynamicResource TalkBrush}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SafetyCodeText" FontSize="11.5" Foreground="{DynamicResource SubTextBrush}" Margin="6,0,0,0"
+                                   AutomationProperties.Name="Safety code"/>
+                    </StackPanel>
+                </Border>
+                <Border x:Name="PingPill" Style="{StaticResource Pill}" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse x:Name="QualityDot" Width="7" Height="7" Fill="{DynamicResource TalkBrush}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="PingText" Text="Ping –" FontSize="11.5" Foreground="{DynamicResource SubTextBrush}" Margin="7,0,0,0"/>
+                    </StackPanel>
+                </Border>
+            </DockPanel>
+
+            <StackPanel Grid.Row="1" VerticalAlignment="Center">
+                <Grid HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="110"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- me -->
+                    <StackPanel>
+                        <Grid Width="104" Height="104">
+                            <Ellipse x:Name="MeRing" Stroke="{DynamicResource AccentBrush}" StrokeThickness="3" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                                <Ellipse.RenderTransform><ScaleTransform x:Name="MeRingScale"/></Ellipse.RenderTransform>
+                                <Ellipse.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="0" Color="#A3C4B0" Opacity="0.9"/></Ellipse.Effect>
+                            </Ellipse>
+                            <Ellipse x:Name="CallMeAvatar" Width="80" Height="80" Fill="Gray"/>
+                            <TextBlock x:Name="CallMeInitials" Foreground="White" FontWeight="SemiBold" FontSize="26"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border x:Name="MeMutedBadge" Width="32" Height="32" CornerRadius="16" Background="#E11D48"
+                                    BorderBrush="#0B0E14" BorderThickness="3" Visibility="Collapsed"
+                                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,8,8">
+                                <TextBlock Text="&#xEC54;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="White"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Grid>
+                        <TextBlock Text="You" HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                        <TextBlock x:Name="MeState" HorizontalAlignment="Center" FontSize="12" Foreground="{DynamicResource SubTextBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <!-- link between the two of you -->
+                    <Canvas x:Name="VoiceLink" Grid.Column="1" Width="64" Height="42" VerticalAlignment="Top" Margin="0,31,0,0">
+                        <Rectangle Width="64" Height="2" Canvas.Top="20" RadiusX="1" RadiusY="1" Opacity="0.5" Fill="{DynamicResource AccentHBrush}"/>
+                        <Ellipse x:Name="LinkDot1" Width="8" Height="8" Canvas.Top="18" Fill="{DynamicResource CyanBrush}">
+                            <Ellipse.Effect><DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="#A3C4B0" Opacity="1"/></Ellipse.Effect>
+                        </Ellipse>
+                        <Ellipse x:Name="LinkDot2" Width="8" Height="8" Canvas.Top="18" Fill="#B5A4CD">
+                            <Ellipse.Effect><DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="#B5A4CD" Opacity="1"/></Ellipse.Effect>
+                        </Ellipse>
+                        <StackPanel x:Name="VoiceBars" Orientation="Horizontal" Canvas.Left="15" Canvas.Top="6" Height="30" VerticalAlignment="Center">
+                            <Rectangle Width="3" Height="8" Fill="{DynamicResource TalkBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Rectangle Width="3" Height="13" Fill="{DynamicResource TalkBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Rectangle Width="3" Height="20" Fill="{DynamicResource TalkBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Rectangle Width="3" Height="26" Fill="{DynamicResource TalkBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Rectangle Width="3" Height="17" Fill="{DynamicResource TalkBrush}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <Rectangle Width="3" Height="10" Fill="{DynamicResource TalkBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Canvas>
+
+                    <!-- partner -->
+                    <StackPanel Grid.Column="2">
+                        <Grid Width="104" Height="104">
+                            <Ellipse x:Name="PartnerRing" Stroke="{DynamicResource TalkBrush}" StrokeThickness="3" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                                <Ellipse.RenderTransform><ScaleTransform x:Name="PartnerRingScale"/></Ellipse.RenderTransform>
+                                <Ellipse.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="0" Color="#9FC6AF" Opacity="0.9"/></Ellipse.Effect>
+                            </Ellipse>
+                            <Ellipse x:Name="CallPartnerAvatar" Width="80" Height="80" Fill="Gray"/>
+                            <TextBlock x:Name="CallPartnerInitials" Foreground="White" FontWeight="SemiBold" FontSize="26"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <TextBlock x:Name="CallPartnerName" HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" Margin="0,8,0,0"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="PartnerState" HorizontalAlignment="Center" FontSize="12" Foreground="{DynamicResource SubTextBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Grid>
+
+                <Border Style="{StaticResource Pill}" HorizontalAlignment="Center" Margin="0,34,0,0" Padding="14,7" CornerRadius="16">
+                    <TextBlock x:Name="ModeHint" FontSize="12.5" Foreground="{DynamicResource SubTextBrush}"/>
+                </Border>
+
+                <!-- friend's volume -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,22,0,0" ToolTip="Your friend's volume">
+                    <TextBlock Text="&#xE993;" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="{DynamicResource FaintTextBrush}"
+                               VerticalAlignment="Center"/>
+                    <Slider x:Name="CallVolSlider" Style="{StaticResource ModernSlider}" Width="170" Margin="10,0"
+                            Minimum="0" Maximum="200" Value="{Binding Value, ElementName=VolSlider, Mode=TwoWay}"
+                            AutomationProperties.Name="Friend volume"/>
+                    <TextBlock Text="{Binding Text, ElementName=VolValue}" FontSize="12" Foreground="{DynamicResource SubTextBrush}"
+                               VerticalAlignment="Center" Width="36"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- controls -->
+            <StackPanel Grid.Row="2" HorizontalAlignment="Center" Orientation="Horizontal">
+                <StackPanel>
+                    <Button x:Name="MuteButton" Style="{StaticResource RoundButton}" Content="&#xE720;" Click="OnMicClick"
+                            ToolTip="Mute microphone" AutomationProperties.Name="Mute"/>
+                    <TextBlock Text="Mute" HorizontalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" FontSize="12" Margin="0,7,0,0"/>
+                </StackPanel>
+                <StackPanel Margin="22,0">
+                    <Button Style="{StaticResource RoundButton}" Width="64" Height="64" FontSize="22" Background="#AD5551"
+                            Content="&#xE778;" Click="OnHangUpClick" ToolTip="Hang up" AutomationProperties.Name="Hang up"/>
+                    <TextBlock Text="End call" HorizontalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" FontSize="12" Margin="0,7,0,0"/>
+                </StackPanel>
+                <StackPanel>
+                    <Button x:Name="DeafenButton" Style="{StaticResource RoundButton}" Content="&#xE7F6;" Click="OnDeafenClick"
+                            ToolTip="Deafen (stop hearing your friend)" AutomationProperties.Name="Deafen"/>
+                    <TextBlock Text="Deafen" HorizontalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" FontSize="12" Margin="0,7,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+
+        <!-- ======================================================= SETTINGS drawer -->
+        <Grid x:Name="SettingsView" Grid.Row="1" Grid.RowSpan="2" Visibility="Collapsed" Background="{DynamicResource BgBrush}" ClipToBounds="True">
+            <Grid.RenderTransform>
+                <TranslateTransform x:Name="SettingsShift"/>
+            </Grid.RenderTransform>
+            <Grid Height="150" VerticalAlignment="Top" IsHitTestVisible="False">
+                <Rectangle Fill="{DynamicResource SettingsSceneryBrush}"/>
+            </Grid>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="24,14,24,20">
+                    <DockPanel Margin="0,0,0,16">
+                        <Button Style="{StaticResource IconButton}" Content="&#xE72B;" Foreground="{DynamicResource HeaderSubBrush}" Click="OnSettingsClick" ToolTip="Back" AutomationProperties.Name="Back"/>
+                        <TextBlock Text="Settings" Foreground="{DynamicResource HeaderTextBrush}" FontFamily="{StaticResource DisplayFont}" FontSize="22" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" Margin="8,0,0,2"/>
+                    </DockPanel>
+
+                    <TextBlock Text="PROFILE" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="Your name (what your friend sees)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="NameBox" Style="{StaticResource DarkTextBox}" MaxLength="32" Tag="Your name"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="AUDIO" Style="{StaticResource SectionTitle}"/>
+                    <StackPanel Margin="0,0,0,12">
+
 
                 <!-- devices -->
                 <Grid>
@@ -131,11 +419,11 @@
                         <RowDefinition/>
                         <RowDefinition/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="&#xE720;" FontFamily="{StaticResource IconFont}" FontSize="15" Foreground="{StaticResource SubTextBrush}"
+                    <TextBlock Text="&#xE720;" FontFamily="{StaticResource IconFont}" FontSize="15" Foreground="{DynamicResource SubTextBrush}"
                                VerticalAlignment="Center" Margin="2,0,12,0" ToolTip="Microphone"/>
                     <ComboBox x:Name="MicBox" Grid.Column="1" Style="{StaticResource DarkCombo}" Height="34"
                               AutomationProperties.Name="Microphone" ToolTip="Microphone"/>
-                    <TextBlock Grid.Row="1" Text="&#xE7F6;" FontFamily="{StaticResource IconFont}" FontSize="15" Foreground="{StaticResource SubTextBrush}"
+                    <TextBlock Grid.Row="1" Text="&#xE7F6;" FontFamily="{StaticResource IconFont}" FontSize="15" Foreground="{DynamicResource SubTextBrush}"
                                VerticalAlignment="Center" Margin="2,8,12,0" ToolTip="Headphones"/>
                     <ComboBox x:Name="OutBox" Grid.Row="1" Grid.Column="1" Style="{StaticResource DarkCombo}" Height="34" Margin="0,8,0,0"
                               AutomationProperties.Name="Headphones" ToolTip="Headphones"/>
@@ -161,8 +449,8 @@
                         </Border.ToolTip>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE916;" FontFamily="{StaticResource IconFont}" FontSize="11"
-                                       Foreground="{StaticResource CyanBrush}" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="DelayTotal" FontSize="11.5" Foreground="{StaticResource SubTextBrush}" Margin="6,0,0,0"/>
+                                       Foreground="{DynamicResource CyanBrush}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="DelayTotal" FontSize="11.5" Foreground="{DynamicResource SubTextBrush}" Margin="6,0,0,0"/>
                         </StackPanel>
                     </Border>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
@@ -176,7 +464,7 @@
                 <!-- ultra-low latency -->
                 <DockPanel Margin="0,10,0,0">
                     <TextBlock x:Name="GlitchText" DockPanel.Dock="Right" FontSize="11.5" VerticalAlignment="Center"
-                               Foreground="{StaticResource FaintTextBrush}"
+                               Foreground="{DynamicResource FaintTextBrush}"
                                ToolTip="Audio gaps filled + headphone underruns. If this keeps rising, turn Ultra-low latency off."/>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                 ToolTip="Fastest audio mode (3 ms device periods where supported). Turn it off if your voice crackles or sounds distorted.">
@@ -184,297 +472,17 @@
                                   AutomationProperties.Name="Ultra-low latency"/>
                         <TextBlock Text="Ultra-low latency" FontSize="13" Margin="10,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
-                </DockPanel>
-              </StackPanel>
-            </Border>
-
-            <DockPanel Grid.Row="1" Margin="4,22,4,10">
-                <TextBlock Text="YOUR PACK" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
-                <Border CornerRadius="8" Background="#1E2638" Padding="7,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                    <TextBlock x:Name="CountText" Text="0" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubTextBrush}"/>
-                </Border>
-                <TextBlock Text="on this network" FontSize="11" Foreground="{StaticResource FaintTextBrush}"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
-            </DockPanel>
-
-            <Grid Grid.Row="2">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <ItemsControl x:Name="PeerList">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type local:PeerVm}">
-                                <Border x:Name="card" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource LineBrush}"
-                                        BorderThickness="1" CornerRadius="14" Padding="12,10" Margin="0,0,0,8">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Grid Width="42" Height="42">
-                                            <Ellipse Fill="{Binding AvatarBrush}"/>
-                                            <TextBlock Text="{Binding Initials}" Foreground="White" FontWeight="SemiBold" FontSize="14"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Grid>
-                                        <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Text="{Binding Address}" FontSize="12" Foreground="{StaticResource FaintTextBrush}" Margin="0,2,0,0"/>
-                                            <TextBlock Text="{Binding VersionWarning}" Visibility="{Binding VersionWarningVisibility}"
-                                                       FontSize="11.5" Foreground="{StaticResource AmberBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
-                                        </StackPanel>
-                                        <Button Grid.Column="2" Style="{StaticResource CallButton}" Content="Call" Tag="{Binding}"
-                                                Click="OnCallPeerClick" AutomationProperties.Name="{Binding Name, StringFormat=Call {0}}"/>
-                                    </Grid>
-                                </Border>
-                                <DataTemplate.Triggers>
-                                    <Trigger SourceName="card" Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="card" Property="BorderBrush" Value="{StaticResource LineHiBrush}"/>
-                                        <Setter TargetName="card" Property="Background" Value="{StaticResource CardHiBrush}"/>
-                                    </Trigger>
-                                </DataTemplate.Triggers>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-
-                <!-- empty state -->
-                <StackPanel x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,-10,0,0">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,5">
-                        <Grid Width="28" Height="28" Margin="0,0,8,0" VerticalAlignment="Center">
-                            <Ellipse x:Name="SearchPulse1" Stroke="{StaticResource CyanBrush}" StrokeThickness="1.5"
-                                     RenderTransformOrigin="0.5,0.5" Opacity="0">
-                                <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
-                            </Ellipse>
-                            <Ellipse x:Name="SearchPulse2" Stroke="#A855F7" StrokeThickness="1.5"
-                                     RenderTransformOrigin="0.5,0.5" Opacity="0">
-                                <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
-                            </Ellipse>
-                            <Ellipse Width="6" Height="6" Fill="{StaticResource CyanBrush}"/>
-                        </Grid>
-                        <TextBlock Text="Looking for your pack" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="LoadingDots" Text="..." Width="22" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <TextBlock Text="Ask your friend to open WolfSpeak&#x0a;on the same network — they'll pop up here."
-                               TextAlignment="Center" HorizontalAlignment="Center" Foreground="{StaticResource SubTextBrush}" FontSize="12.5"/>
-                </StackPanel>
-            </Grid>
-
-            <!-- call by IP -->
-            <Border Grid.Row="3" Style="{StaticResource Card}" Padding="14,12" Margin="0,10,0,0" CornerRadius="16">
-                <StackPanel>
-                    <TextBlock Text="Friend not showing up? Call their IP directly" FontSize="12" Foreground="{StaticResource SubTextBrush}" Margin="2,0,0,8"/>
-                    <DockPanel>
-                        <Button DockPanel.Dock="Right" Style="{StaticResource CallButton}" Content="Call" Height="38" Margin="8,0,0,0"
-                                Click="OnCallIpClick" AutomationProperties.Name="Call IP"/>
-                        <TextBox x:Name="IpBox" Style="{StaticResource DarkTextBox}" Tag="e.g. 192.168.1.20" KeyDown="OnIpKeyDown"/>
-                    </DockPanel>
-                </StackPanel>
-            </Border>
-        </Grid>
-
-        <!-- ======================================================= RINGING / CALLING -->
-        <Grid x:Name="RingView" Grid.Row="1" Visibility="Collapsed" Margin="16,0,16,30">
-            <Grid.RenderTransform><TranslateTransform/></Grid.RenderTransform>
-            <StackPanel VerticalAlignment="Center">
-                <Grid Width="250" Height="250">
-                    <Ellipse x:Name="RingPulse1" Stroke="{StaticResource CyanBrush}" StrokeThickness="2" RenderTransformOrigin="0.5,0.5" Opacity="0">
-                        <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
-                    </Ellipse>
-                    <Ellipse x:Name="RingPulse2" Stroke="#6366F1" StrokeThickness="2" RenderTransformOrigin="0.5,0.5" Opacity="0">
-                        <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
-                    </Ellipse>
-                    <Ellipse x:Name="RingPulse3" Stroke="#A855F7" StrokeThickness="2" RenderTransformOrigin="0.5,0.5" Opacity="0">
-                        <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
-                    </Ellipse>
-                    <Ellipse x:Name="RingAvatar" Width="124" Height="124" Fill="Gray">
-                        <Ellipse.Effect>
-                            <DropShadowEffect BlurRadius="40" ShadowDepth="0" Color="#6366F1" Opacity="0.7"/>
-                        </Ellipse.Effect>
-                    </Ellipse>
-                    <TextBlock x:Name="RingInitials" Foreground="White" FontWeight="SemiBold" FontSize="40"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Grid>
-                <TextBlock x:Name="RingName" HorizontalAlignment="Center" FontFamily="{StaticResource DisplayFont}" FontSize="28"
-                           FontWeight="SemiBold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
-                <TextBlock x:Name="RingStatus" HorizontalAlignment="Center" FontSize="14" Foreground="{StaticResource SubTextBrush}" Margin="0,4,0,0"/>
-
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,44,0,0">
-                    <StackPanel>
-                        <Button Style="{StaticResource RoundButton}" Width="70" Height="70" FontSize="24"
-                                Background="#E11D48" Content="&#xE778;" Click="OnHangUpClick" AutomationProperties.Name="Decline"/>
-                        <TextBlock x:Name="DeclineLabel" Text="Decline" HorizontalAlignment="Center" Margin="0,8,0,0"
-                                   FontSize="12.5" Foreground="{StaticResource SubTextBrush}"/>
-                    </StackPanel>
-                    <StackPanel x:Name="AcceptPanel" Margin="64,0,0,0">
-                        <Button Style="{StaticResource RoundButton}" Width="70" Height="70" FontSize="24" Content="&#xE717;"
-                                Click="OnAcceptClick" AutomationProperties.Name="Accept">
-                            <Button.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#34D399" Offset="0"/>
-                                    <GradientStop Color="#059669" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Button.Background>
-                            <Button.Effect>
-                                <DropShadowEffect BlurRadius="24" ShadowDepth="0" Color="#34D399" Opacity="0.6"/>
-                            </Button.Effect>
-                        </Button>
-                        <TextBlock Text="Accept" HorizontalAlignment="Center" Margin="0,8,0,0" FontSize="12.5" Foreground="{StaticResource SubTextBrush}"/>
-                    </StackPanel>
-                </StackPanel>
-            </StackPanel>
-        </Grid>
-
-        <!-- ======================================================= CONNECTED -->
-        <Grid x:Name="CallView" Grid.Row="1" Visibility="Collapsed" Margin="16,6,16,20">
-            <Grid.RenderTransform><TranslateTransform/></Grid.RenderTransform>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-
-            <DockPanel>
-                <Border Style="{StaticResource Pill}">
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="7" Height="7" Fill="{StaticResource TalkBrush}" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="CallTimer" Text="Connected · 00:00" FontSize="11.5" Foreground="{StaticResource SubTextBrush}" Margin="7,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource Pill}" Margin="8,0,0,0"
-                        ToolTip="Encrypted call. Read this code to each other: if it matches on both PCs, nobody is listening in between.">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE72E;" FontFamily="{StaticResource IconFont}" FontSize="11"
-                                   Foreground="{StaticResource TalkBrush}" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="SafetyCodeText" FontSize="11.5" Foreground="{StaticResource SubTextBrush}" Margin="6,0,0,0"
-                                   AutomationProperties.Name="Safety code"/>
-                    </StackPanel>
-                </Border>
-                <Border x:Name="PingPill" Style="{StaticResource Pill}" HorizontalAlignment="Right">
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse x:Name="QualityDot" Width="7" Height="7" Fill="{StaticResource TalkBrush}" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="PingText" Text="Ping –" FontSize="11.5" Foreground="{StaticResource SubTextBrush}" Margin="7,0,0,0"/>
-                    </StackPanel>
-                </Border>
-            </DockPanel>
-
-            <StackPanel Grid.Row="1" VerticalAlignment="Center">
-                <Grid HorizontalAlignment="Center">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="130"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="130"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- me -->
-                    <StackPanel>
-                        <Grid Width="124" Height="124">
-                            <Ellipse x:Name="MeRing" Stroke="{StaticResource AccentBrush}" StrokeThickness="3" Opacity="0" RenderTransformOrigin="0.5,0.5">
-                                <Ellipse.RenderTransform><ScaleTransform x:Name="MeRingScale"/></Ellipse.RenderTransform>
-                                <Ellipse.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="0" Color="#22D3EE" Opacity="0.9"/></Ellipse.Effect>
-                            </Ellipse>
-                            <Ellipse x:Name="CallMeAvatar" Width="100" Height="100" Fill="Gray"/>
-                            <TextBlock x:Name="CallMeInitials" Foreground="White" FontWeight="SemiBold" FontSize="32"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <Border x:Name="MeMutedBadge" Width="32" Height="32" CornerRadius="16" Background="#E11D48"
-                                    BorderBrush="#0B0E14" BorderThickness="3" Visibility="Collapsed"
-                                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,8,8">
-                                <TextBlock Text="&#xEC54;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="White"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                        </Grid>
-                        <TextBlock Text="You" HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                        <TextBlock x:Name="MeState" HorizontalAlignment="Center" FontSize="12" Foreground="{StaticResource SubTextBrush}" Margin="0,2,0,0"/>
-                    </StackPanel>
-
-                    <!-- link between the two of you -->
-                    <Canvas Grid.Column="1" Width="64" Height="10" VerticalAlignment="Top" Margin="0,57,0,0">
-                        <Rectangle Width="64" Height="2" Canvas.Top="4" RadiusX="1" RadiusY="1" Opacity="0.5" Fill="{StaticResource AccentHBrush}"/>
-                        <Ellipse x:Name="LinkDot1" Width="8" Height="8" Canvas.Top="1" Fill="{StaticResource CyanBrush}">
-                            <Ellipse.Effect><DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="#22D3EE" Opacity="1"/></Ellipse.Effect>
-                        </Ellipse>
-                        <Ellipse x:Name="LinkDot2" Width="8" Height="8" Canvas.Top="1" Fill="#A855F7">
-                            <Ellipse.Effect><DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="#A855F7" Opacity="1"/></Ellipse.Effect>
-                        </Ellipse>
-                    </Canvas>
-
-                    <!-- partner -->
-                    <StackPanel Grid.Column="2">
-                        <Grid Width="124" Height="124">
-                            <Ellipse x:Name="PartnerRing" Stroke="{StaticResource TalkBrush}" StrokeThickness="3" Opacity="0" RenderTransformOrigin="0.5,0.5">
-                                <Ellipse.RenderTransform><ScaleTransform x:Name="PartnerRingScale"/></Ellipse.RenderTransform>
-                                <Ellipse.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="0" Color="#34D399" Opacity="0.9"/></Ellipse.Effect>
-                            </Ellipse>
-                            <Ellipse x:Name="CallPartnerAvatar" Width="100" Height="100" Fill="Gray"/>
-                            <TextBlock x:Name="CallPartnerInitials" Foreground="White" FontWeight="SemiBold" FontSize="32"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Grid>
-                        <TextBlock x:Name="CallPartnerName" HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" Margin="0,8,0,0"
-                                   TextTrimming="CharacterEllipsis"/>
-                        <TextBlock x:Name="PartnerState" HorizontalAlignment="Center" FontSize="12" Foreground="{StaticResource SubTextBrush}" Margin="0,2,0,0"/>
-                    </StackPanel>
-                </Grid>
-
-                <Border Style="{StaticResource Pill}" HorizontalAlignment="Center" Margin="0,34,0,0" Padding="14,7" CornerRadius="16">
-                    <TextBlock x:Name="ModeHint" FontSize="12.5" Foreground="{StaticResource SubTextBrush}"/>
-                </Border>
-
-                <!-- friend's volume -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,22,0,0" ToolTip="Your friend's volume">
-                    <TextBlock Text="&#xE993;" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="{StaticResource FaintTextBrush}"
-                               VerticalAlignment="Center"/>
-                    <Slider x:Name="CallVolSlider" Style="{StaticResource ModernSlider}" Width="170" Margin="10,0"
-                            Minimum="0" Maximum="200" Value="{Binding Value, ElementName=VolSlider, Mode=TwoWay}"
-                            AutomationProperties.Name="Friend volume"/>
-                    <TextBlock Text="{Binding Text, ElementName=VolValue}" FontSize="12" Foreground="{StaticResource SubTextBrush}"
-                               VerticalAlignment="Center" Width="36"/>
-                </StackPanel>
-            </StackPanel>
-
-            <!-- controls -->
-            <Border Grid.Row="2" HorizontalAlignment="Center" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource LineBrush}"
-                    BorderThickness="1" CornerRadius="42" Padding="14,12">
-                <StackPanel Orientation="Horizontal">
-                    <Button x:Name="MuteButton" Style="{StaticResource RoundButton}" Content="&#xE720;" Click="OnMicClick"
-                            ToolTip="Mute microphone" AutomationProperties.Name="Mute"/>
-                    <Button Style="{StaticResource RoundButton}" Width="72" Height="72" FontSize="24" Margin="18,0" Background="#E11D48"
-                            Content="&#xE778;" Click="OnHangUpClick" ToolTip="Hang up" AutomationProperties.Name="Hang up">
-                        <Button.Effect><DropShadowEffect BlurRadius="22" ShadowDepth="0" Color="#E11D48" Opacity="0.5"/></Button.Effect>
-                    </Button>
-                    <Button x:Name="DeafenButton" Style="{StaticResource RoundButton}" Content="&#xE7F6;" Click="OnDeafenClick"
-                            ToolTip="Deafen (stop hearing your friend)" AutomationProperties.Name="Deafen"/>
-                </StackPanel>
-            </Border>
-        </Grid>
-
-        <!-- ======================================================= SETTINGS drawer -->
-        <Grid x:Name="SettingsView" Grid.Row="1" Visibility="Collapsed" Background="#0C1018">
-            <Grid.RenderTransform>
-                <TranslateTransform x:Name="SettingsShift"/>
-            </Grid.RenderTransform>
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel Margin="16,6,16,20">
-                    <DockPanel Margin="0,0,0,16">
-                        <Button Style="{StaticResource IconButton}" Content="&#xE72B;" Click="OnSettingsClick" ToolTip="Back" AutomationProperties.Name="Back"/>
-                        <TextBlock Text="Settings" FontFamily="{StaticResource DisplayFont}" FontSize="22" FontWeight="SemiBold"
-                                   VerticalAlignment="Center" Margin="8,0,0,2"/>
-                    </DockPanel>
-
-                    <TextBlock Text="PROFILE" Style="{StaticResource SectionTitle}"/>
-                    <Border Style="{StaticResource Card}" Margin="0,0,0,18">
-                        <StackPanel>
-                            <TextBlock Text="Your name (what your friend sees)" Style="{StaticResource FieldLabel}"/>
-                            <TextBox x:Name="NameBox" Style="{StaticResource DarkTextBox}" MaxLength="32" Tag="Your name"/>
-                        </StackPanel>
-                    </Border>
-
+                </DockPanel>                    </StackPanel>
+                    <Expander Header="Voice and connection" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,16"><StackPanel Margin="0,14,0,0">
                     <TextBlock Text="TALKING" Style="{StaticResource SectionTitle}"/>
-                    <Border Style="{StaticResource Card}" Margin="0,0,0,18">
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                         <StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Border Background="{StaticResource InputBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                                <Border Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
                                         CornerRadius="11" Padding="3">
                                     <UniformGrid Columns="2">
                                         <RadioButton x:Name="VoiceMode" Style="{StaticResource Segment}" GroupName="mode" Content="Voice activated"/>
@@ -487,20 +495,20 @@
 
                             <StackPanel x:Name="GatePanel">
                                 <DockPanel Margin="2,16,2,7">
-                                    <TextBlock Text="Mic sensitivity" FontSize="12.5" Foreground="{StaticResource SubTextBrush}"/>
-                                    <TextBlock x:Name="GateLabel" FontSize="12" Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Right"/>
+                                    <TextBlock Text="Mic sensitivity" FontSize="12.5" Foreground="{DynamicResource SubTextBrush}"/>
+                                    <TextBlock x:Name="GateLabel" FontSize="12" Foreground="{DynamicResource FaintTextBrush}" HorizontalAlignment="Right"/>
                                 </DockPanel>
                                 <Grid x:Name="MeterHost" Height="24">
-                                    <Border CornerRadius="8" Background="{StaticResource InputBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"/>
+                                    <Border CornerRadius="8" Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"/>
                                     <Border x:Name="MeterFill" HorizontalAlignment="Left" Width="0" CornerRadius="6" Margin="3"
-                                            Background="{StaticResource AccentHBrush}"/>
+                                            Background="{DynamicResource AccentHBrush}"/>
                                     <Border x:Name="GateShade" HorizontalAlignment="Left" Width="0" CornerRadius="7,0,0,7" Margin="1"
                                             Background="#8C0A0D14" IsHitTestVisible="False"/>
                                     <Slider x:Name="GateSlider" Style="{StaticResource GateSlider}" Minimum="-70" Maximum="0"
                                             ToolTip="Drag: sound left of this line is not sent"/>
                                 </Grid>
                                 <TextBlock Text="Speak normally: the bar should pass the white line, background noise should stay left of it."
-                                           TextWrapping="Wrap" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" Margin="2,6,0,0"/>
+                                           TextWrapping="Wrap" FontSize="11.5" Foreground="{DynamicResource FaintTextBrush}" Margin="2,6,0,0"/>
                             </StackPanel>
 
                             <DockPanel Margin="0,16,0,0">
@@ -512,7 +520,7 @@
                     </Border>
 
                     <TextBlock Text="LISTENING" Style="{StaticResource SectionTitle}"/>
-                    <Border Style="{StaticResource Card}" Margin="0,0,0,18">
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                         <StackPanel>
                             <DockPanel>
                                 <TextBlock Text="Headphone volume" Style="{StaticResource FieldLabel}"/>
@@ -520,14 +528,14 @@
                             </DockPanel>
                             <Slider x:Name="VolSlider" Style="{StaticResource ModernSlider}" Minimum="0" Maximum="200"/>
 
-                            <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                            <Border Height="1" Background="{DynamicResource LineBrush}" Margin="0,16"/>
                             <DockPanel>
                                 <CheckBox x:Name="BufAutoSwitch" Style="{StaticResource Switch}" DockPanel.Dock="Right" VerticalAlignment="Center"
                                           AutomationProperties.Name="Automatic delay buffer"/>
                                 <StackPanel>
                                     <TextBlock Text="Automatic delay buffer" FontSize="13.5" FontWeight="SemiBold"/>
                                     <TextBlock Text="As low as your connection allows, grows only if the voice stutters" TextWrapping="Wrap"
-                                               FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" Margin="0,2,8,0"/>
+                                               FontSize="11.5" Foreground="{DynamicResource FaintTextBrush}" Margin="0,2,8,0"/>
                                 </StackPanel>
                             </DockPanel>
                             <DockPanel Margin="0,14,0,0">
@@ -539,8 +547,9 @@
                         </StackPanel>
                     </Border>
 
+                    </StackPanel></Expander>
                     <TextBlock Text="APP" Style="{StaticResource SectionTitle}"/>
-                    <Border Style="{StaticResource Card}" Margin="0,0,0,18">
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                         <StackPanel>
                             <DockPanel>
                                 <CheckBox x:Name="TraySwitch" Style="{StaticResource Switch}" DockPanel.Dock="Right" VerticalAlignment="Center"
@@ -548,20 +557,20 @@
                                 <StackPanel>
                                     <TextBlock Text="Keep running in tray when closed" FontSize="13.5" FontWeight="SemiBold"/>
                                     <TextBlock Text="Your pack can still call you. Quit from the tray icon." TextWrapping="Wrap"
-                                               FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" Margin="0,2,8,0"/>
+                                               FontSize="11.5" Foreground="{DynamicResource FaintTextBrush}" Margin="0,2,8,0"/>
                                 </StackPanel>
                             </DockPanel>
-                            <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,14"/>
+                            <Border Height="1" Background="{DynamicResource LineBrush}" Margin="0,14"/>
                             <DockPanel>
                                 <CheckBox x:Name="StartupSwitch" Style="{StaticResource Switch}" DockPanel.Dock="Right" VerticalAlignment="Center"
                                           AutomationProperties.Name="Start with Windows"/>
                                 <StackPanel>
                                     <TextBlock Text="Start with Windows" FontSize="13.5" FontWeight="SemiBold"/>
                                     <TextBlock Text="Starts quietly in the tray when you log in" TextWrapping="Wrap"
-                                               FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" Margin="0,2,8,0"/>
+                                               FontSize="11.5" Foreground="{DynamicResource FaintTextBrush}" Margin="0,2,8,0"/>
                                 </StackPanel>
                             </DockPanel>
-                            <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,14"/>
+                            <Border Height="1" Background="{DynamicResource LineBrush}" Margin="0,14"/>
                             <TextBlock Text="Shortcuts (work in game)" FontSize="13.5" FontWeight="SemiBold"/>
                             <Grid Margin="0,8,0,0">
                                 <Grid.ColumnDefinitions>
@@ -572,11 +581,11 @@
                                     <RowDefinition/>
                                     <RowDefinition/>
                                 </Grid.RowDefinitions>
-                                <TextBlock Text="Mute / unmute mic" FontSize="12.5" Foreground="{StaticResource SubTextBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Text="Mute / unmute mic" FontSize="12.5" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center"/>
                                 <Border Grid.Column="1" Style="{StaticResource Pill}" Margin="0,0,0,6">
                                     <TextBlock Text="Ctrl + Shift + M" FontSize="11.5" FontWeight="SemiBold"/>
                                 </Border>
-                                <TextBlock Grid.Row="1" Text="Deafen / undeafen" FontSize="12.5" Foreground="{StaticResource SubTextBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Row="1" Text="Deafen / undeafen" FontSize="12.5" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center"/>
                                 <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Pill}">
                                     <TextBlock Text="Ctrl + Shift + D" FontSize="11.5" FontWeight="SemiBold"/>
                                 </Border>
@@ -586,14 +595,14 @@
 
                     <StackPanel x:Name="SavedIpsSection">
                         <TextBlock Text="SAVED ADDRESSES" Style="{StaticResource SectionTitle}"/>
-                        <Border Style="{StaticResource Card}" Margin="0,0,0,18" Padding="14,14,8,8">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12" Padding="14,14,8,8">
                             <ItemsControl x:Name="IpList">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border CornerRadius="10" Background="#1C2435" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                                        <Border CornerRadius="10" Background="#1C2435" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
                                                 Padding="10,2,2,2" Margin="0,0,6,6">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="{Binding}" VerticalAlignment="Center" FontSize="12.5"/>
@@ -608,26 +617,26 @@
                     </StackPanel>
 
                     <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Margin="0,4,0,6" Opacity="0.8">
-                        <Image Source="{StaticResource WolfHeadsetIcon}" Width="16" Height="16" Margin="0,0,7,0"/>
-                        <TextBlock x:Name="AboutVersion" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource SubTextBrush}"/>
+                        <Image Source="{StaticResource WolfHeadsetIcon}" Width="20" Height="20" Margin="0,0,7,0"/>
+                        <TextBlock x:Name="AboutVersion" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}"/>
                     </StackPanel>
                     <TextBlock x:Name="AboutText" HorizontalAlignment="Center" TextAlignment="Center" FontSize="11.5"
-                               Foreground="{StaticResource FaintTextBrush}"/>
+                               Foreground="{DynamicResource FaintTextBrush}"/>
                     <Button x:Name="UpdateButton" HorizontalAlignment="Center" Margin="0,12,0,0" Padding="14,6" Cursor="Hand"
                             Click="OnCheckUpdatesClick" AutomationProperties.Name="Check for updates">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="bd" CornerRadius="14" Padding="{TemplateBinding Padding}" Background="#1E2638"
-                                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+                                        BorderBrush="{DynamicResource LineBrush}" BorderThickness="1">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE895;" FontFamily="{StaticResource IconFont}" FontSize="11"
-                                                   Foreground="{StaticResource CyanBrush}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                                   Foreground="{DynamicResource CyanBrush}" VerticalAlignment="Center" Margin="0,0,7,0"/>
                                         <ContentPresenter VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource LineHiBrush}"/>
+                                        <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource LineHiBrush}"/>
                                     </Trigger>
                                     <Trigger Property="IsEnabled" Value="False">
                                         <Setter TargetName="bd" Property="Opacity" Value="0.6"/>
@@ -635,17 +644,17 @@
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
                         </Button.Template>
-                        <TextBlock x:Name="UpdateButtonText" Text="Check for updates" FontSize="12" Foreground="{StaticResource SubTextBrush}"/>
+                        <TextBlock x:Name="UpdateButtonText" Text="Check for updates" FontSize="12" Foreground="{DynamicResource SubTextBrush}"/>
                     </Button>
                     <TextBlock x:Name="UpdateStatus" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" FontSize="11.5"
-                               Foreground="{StaticResource FaintTextBrush}" Margin="0,6,0,0" Visibility="Collapsed"/>
+                               Foreground="{DynamicResource FaintTextBrush}" Margin="0,6,0,0" Visibility="Collapsed"/>
                 </StackPanel>
             </ScrollViewer>
         </Grid>
 
         <!-- toast -->
-        <Border x:Name="Toast" Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="16,4,16,0"
-                CornerRadius="14" Background="#1C2333" BorderBrush="{StaticResource LineHiBrush}" BorderThickness="1" Padding="16,10"
+        <Border x:Name="Toast" Grid.Row="2" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="16,4,16,0"
+                CornerRadius="14" Background="#1C2333" BorderBrush="{DynamicResource LineHiBrush}" BorderThickness="1" Padding="16,10"
                 Visibility="Collapsed" IsHitTestVisible="False">
             <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.5" Color="Black"/></Border.Effect>
             <TextBlock x:Name="ToastText" TextWrapping="Wrap" MaxWidth="340" FontSize="13"/>

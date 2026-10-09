@@ -3,6 +3,20 @@
 Every release needs an entry here before it's tagged — the release build copies the matching section
 into the GitHub release notes (and fails if there isn't one).
 
+## [1.0.5] - 2026-10-09
+
+### Added
+- Animated pixel night scenery with stars extending into the header, a round moon, flowers, and layered ground fog.
+- Continuous scenery variants and four animal encounters: a deer chase, a butterfly sneeze, a firefly chase, and a fox surprise.
+- Voice activity animation between avatars during calls.
+
+### Changed
+- Cleaner home and call pages with charcoal backgrounds, subtle gradients, and clear Call buttons.
+- Audio devices and voice options now live in compact Settings; direct IP calling stays collapsed until needed.
+- Header logo matches the shortcut icon.
+- Window width is fixed, vertical resizing remains available, and maximizing is disabled.
+- Demo screenshots render directly from the app for reliable previews.
+
 ## [1.0.4] - 2026-10-07
 
 ### Changed

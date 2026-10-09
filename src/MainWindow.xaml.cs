@@ -32,7 +32,6 @@ public partial class MainWindow : Window
         new(0xC0, "` (tilde)"), new(0x56, "V"), new(0x42, "B"), new(0x54, "T"), new(0x58, "X"),
     ];
 
-    static readonly Brush ControlBrush = Frozen(new SolidColorBrush(Color.FromRgb(0x1C, 0x23, 0x33)));
     static readonly Brush DangerFill = Frozen(new SolidColorBrush(Color.FromRgb(0xE1, 0x1D, 0x48)));
 
     readonly VoiceEngine engine;
@@ -62,11 +61,21 @@ public partial class MainWindow : Window
     long nextLoadingDotsMs;
     int loadingDotCount = 3;
     bool searchAnimating;
+    int appliedPeriod = -1;
 
     public MainWindow(VoiceEngine engine, DemoScene? demo = null)
     {
         this.engine = engine;
         InitializeComponent();
+        using (var iconStream = Application.GetResourceStream(new Uri("pack://application:,,,/assets/wolfspeak.ico")).Stream)
+        {
+            var iconDecoder = System.Windows.Media.Imaging.BitmapDecoder.Create(iconStream,
+                System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
+                System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+            var logo = iconDecoder.Frames.MaxBy(frame => frame.PixelWidth)!;
+            logo.Freeze();
+            Resources["ShortcutLogo"] = logo;
+        }
         if (demo == DemoScene.Settings) Loaded += (_, _) => ToggleSettings(true);
 
         PeerList.ItemsSource = peers;
@@ -106,13 +115,17 @@ public partial class MainWindow : Window
 
         RestoreWindowPosition();
         IsVisibleChanged += (_, _) =>
-            frameTimer.Interval = TimeSpan.FromMilliseconds(IsVisible ? 30 : 200); // idle cheaply in the tray
+        {
+            frameTimer.Interval = TimeSpan.FromMilliseconds(IsVisible ? 30 : 200);
+            SetLinkAnimation(engine.State == CallState.Connected);
+        };
 
         SourceInitialized += (_, _) => { StyleWindowFrame(); RegisterHotkeys(); };
         StateChanged += (_, _) =>
         {
             if (WindowState == WindowState.Minimized) { HideToTray(); return; }
-            Root.Margin = WindowState == WindowState.Maximized ? new Thickness(7) : new Thickness(0);
+            if (WindowState == WindowState.Maximized) WindowState = WindowState.Normal;
+            Root.Margin = new Thickness(0);
         };
         Closing += (_, e) =>
         {
@@ -579,6 +592,18 @@ public partial class MainWindow : Window
     {
         if (engine.IsDemo) engine.DemoTick();
         long now = Environment.TickCount64;
+        int period = 3;
+        if (period != appliedPeriod)
+        {
+            TimePalette.Apply(this, period);
+            appliedPeriod = period;
+            UpdateCallButtons();
+        }
+        if (IsVisible && WindowState != WindowState.Minimized)
+        {
+            if (!settingsOpen) Scenery.Advance(now);
+            TitleStars.Advance(now);
+        }
         var state = engine.State;
         if (state != shownState) OnStateChanged(shownState, state);
         UpdateTray(state);
@@ -745,6 +770,19 @@ public partial class MainWindow : Window
         SetState(PartnerState, engine.Deafened ? ("You deafened them", "DangerBrush")
             : talking ? ("Speaking", "TalkBrush")
             : ("Connected", "SubTextBrush"));
+
+        // Voice travels only in the direction that is actually carrying audio.
+        LinkDot1.Opacity = tx && !muted ? .9 : .15;
+        LinkDot2.Opacity = talking && !engine.Deafened ? .9 : .15;
+        double activity = Math.Max(meRing, engine.Deafened ? 0 : partnerRing);
+        int index = 0;
+        foreach (Rectangle bar in VoiceBars.Children)
+        {
+            double wave = SystemParameters.ClientAreaAnimation ? .5 + .5 * Math.Sin(now / 140.0 - index * .7) : .6;
+            bar.Height = 3 + activity * (8 + wave * 18);
+            bar.Opacity = .35 + activity * .65;
+            index++;
+        }
     }
 
     void SetState(TextBlock block, (string Text, string Brush) s)
@@ -757,10 +795,10 @@ public partial class MainWindow : Window
     void UpdateCallButtons()
     {
         bool muted = engine.Muted, deaf = engine.Deafened;
-        MuteButton.Background = muted ? DangerFill : ControlBrush;
+        MuteButton.Background = muted ? DangerFill : (Brush)FindResource("CardHiBrush");
         MuteButton.Content = muted ? "" : "";
         MuteButton.ToolTip = muted ? "Unmute microphone" : "Mute microphone";
-        DeafenButton.Background = deaf ? DangerFill : ControlBrush;
+        DeafenButton.Background = deaf ? DangerFill : (Brush)FindResource("CardHiBrush");
         DeafenButton.Content = deaf ? "" : "";
         DeafenButton.ToolTip = deaf ? "Undeafen" : "Deafen (stop hearing your friend)";
     }
@@ -824,6 +862,7 @@ public partial class MainWindow : Window
 
     static void SetPulses(bool on, params Ellipse[] rings)
     {
+        on = on && SystemParameters.ClientAreaAnimation;
         for (int i = 0; i < rings.Length; i++)
         {
             var ring = rings[i];
@@ -852,6 +891,7 @@ public partial class MainWindow : Window
 
     void SetLinkAnimation(bool on)
     {
+        on = on && IsVisible && !settingsOpen && SystemParameters.ClientAreaAnimation;
         var dur = TimeSpan.FromSeconds(1.4);
         LinkDot1.BeginAnimation(Canvas.LeftProperty, on ? new DoubleAnimation(0, 56, dur) { RepeatBehavior = RepeatBehavior.Forever } : null);
         LinkDot2.BeginAnimation(Canvas.LeftProperty, on ? new DoubleAnimation(56, 0, dur) { RepeatBehavior = RepeatBehavior.Forever } : null);
@@ -875,6 +915,9 @@ public partial class MainWindow : Window
     void ToggleSettings(bool open)
     {
         settingsOpen = open;
+        SceneryHeader.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
+        SceneryRow.Height = new GridLength(open ? 0 : 244);
+        SetLinkAnimation(engine.State == CallState.Connected);
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
         if (open)
         {
@@ -990,9 +1033,22 @@ public partial class MainWindow : Window
     [DllImport("dwmapi.dll")]
     static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
 
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
+    static extern int GetWindowLong(IntPtr hwnd, int index);
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongW")]
+    static extern int SetWindowLong(IntPtr hwnd, int index, int value);
+
     void StyleWindowFrame()
     {
         var hwnd = new WindowInteropHelper(this).Handle;
+        // Preserve vertical resizing and minimize, but remove the native maximize action.
+        SetWindowLong(hwnd, -16, GetWindowLong(hwnd, -16) & ~0x00010000);
+        HwndSource.FromHwnd(hwnd).AddHook((IntPtr h, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) =>
+        {
+            if (msg == 0x0112 && (wParam.ToInt64() & 0xFFF0) == 0xF030)
+                handled = true;
+            return IntPtr.Zero;
+        });
         int dark = 1, round = 2, border = 0x003B2A22; // COLORREF 0x00BBGGRR -> #222A3B
         DwmSetWindowAttribute(hwnd, 20, ref dark, sizeof(int));   // DWMWA_USE_IMMERSIVE_DARK_MODE
         DwmSetWindowAttribute(hwnd, 33, ref round, sizeof(int));  // DWMWA_WINDOW_CORNER_PREFERENCE = round
@@ -1000,4 +1056,31 @@ public partial class MainWindow : Window
     }
 
     static T Frozen<T>(T f) where T : Freezable { f.Freeze(); return f; }
+
+    internal void SaveDemoSnapshot(string path)
+    {
+        if (!engine.IsDemo) return;
+        Root.UpdateLayout();
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(
+            (int)Math.Ceiling(Root.ActualWidth * dpi.DpiScaleX),
+            (int)Math.Ceiling(Root.ActualHeight * dpi.DpiScaleY),
+            dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+        bitmap.Render(Root);
+        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+        using var file = System.IO.File.Create(path);
+        encoder.Save(file);
+    }
+
+    internal void SetSnapshotHour(int hour)
+    {
+        if (engine.IsDemo) Scenery.SnapshotHour = hour;
+    }
+
+    internal void SetSnapshotTime(double seconds)
+    {
+        if (engine.IsDemo) Scenery.SnapshotTime = seconds;
+    }
+
 }
