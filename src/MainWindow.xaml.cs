@@ -616,7 +616,7 @@ public partial class MainWindow : Window
                 if (now >= nextRingSoundMs)
                 {
                     engine.PlaySound(state == CallState.Ringing ? SoundKind.Ring : SoundKind.Ringback);
-                    nextRingSoundMs = now + (state == CallState.Ringing ? 2200 : 2600);
+                    nextRingSoundMs = now + (state == CallState.Ringing ? SoundPlayer.LengthMs(SoundKind.Ring) + 900 : 2600);
                 }
                 break;
 
