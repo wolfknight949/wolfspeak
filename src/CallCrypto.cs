@@ -67,6 +67,9 @@ public static class CallCrypto
     static readonly byte[] RequestLabel = "WolfSpeak call request v1"u8.ToArray();
     static readonly byte[] AcceptLabel = "WolfSpeak call accept v1"u8.ToArray();
     static readonly byte[] KeyInfo = "WolfSpeak call key v1"u8.ToArray();
+    static readonly byte[] ChatRequestLabel = "WolfSpeak chat request v1"u8.ToArray();
+    static readonly byte[] ChatAcceptLabel = "WolfSpeak chat accept v1"u8.ToArray();
+    static readonly byte[] ChatKeyInfo = "WolfSpeak chat key v1"u8.ToArray();
 
     public static bool IsP256(AsymmetricAlgorithm key) =>
         key switch
@@ -86,19 +89,19 @@ public static class CallCrypto
     // Request signs: label | senderId | eph_caller
     // Accept  signs: label | senderId | eph_callee | eph_caller
 
-    public static byte[] BuildRequest(Identity me, uint myId, byte[] myEph) =>
-        BuildHandshake(me, myEph, Signed(RequestLabel, myId, myEph, []));
+    public static byte[] BuildRequest(Identity me, uint myId, byte[] myEph, bool chat = false) =>
+        BuildHandshake(me, myEph, Signed(chat ? ChatRequestLabel : RequestLabel, myId, myEph, []));
 
-    public static byte[] BuildAccept(Identity me, uint myId, byte[] myEph, byte[] callerEph) =>
-        BuildHandshake(me, myEph, Signed(AcceptLabel, myId, myEph, callerEph));
+    public static byte[] BuildAccept(Identity me, uint myId, byte[] myEph, byte[] callerEph, bool chat = false) =>
+        BuildHandshake(me, myEph, Signed(chat ? ChatAcceptLabel : AcceptLabel, myId, myEph, callerEph));
 
     /// <summary>Checks a call request; returns the caller's ephemeral key and identity, or false if forged/garbled.</summary>
-    public static bool VerifyRequest(ReadOnlySpan<byte> payload, uint senderId, out byte[] eph, out byte[] identity) =>
-        Verify(payload, out eph, out identity, e => Signed(RequestLabel, senderId, e, []));
+    public static bool VerifyRequest(ReadOnlySpan<byte> payload, uint senderId, out byte[] eph, out byte[] identity, bool chat = false) =>
+        Verify(payload, out eph, out identity, e => Signed(chat ? ChatRequestLabel : RequestLabel, senderId, e, []));
 
     /// <summary>Checks a call accept that must answer <paramref name="myEph"/>.</summary>
-    public static bool VerifyAccept(ReadOnlySpan<byte> payload, uint senderId, byte[] myEph, out byte[] eph, out byte[] identity) =>
-        Verify(payload, out eph, out identity, e => Signed(AcceptLabel, senderId, e, myEph));
+    public static bool VerifyAccept(ReadOnlySpan<byte> payload, uint senderId, byte[] myEph, out byte[] eph, out byte[] identity, bool chat = false) =>
+        Verify(payload, out eph, out identity, e => Signed(chat ? ChatAcceptLabel : AcceptLabel, senderId, e, myEph));
 
     static byte[] BuildHandshake(Identity me, byte[] eph, byte[] toSign)
     {
@@ -151,7 +154,7 @@ public static class CallCrypto
     }
 
     /// <summary>AES-256 key for the call: ECDH(ephemerals) → HKDF-SHA256, salted with both ephemerals.</summary>
-    public static byte[] DeriveKey(ECDiffieHellman mine, byte[] theirEph, byte[] callerEph, byte[] calleeEph)
+    public static byte[] DeriveKey(ECDiffieHellman mine, byte[] theirEph, byte[] callerEph, byte[] calleeEph, bool chat = false)
     {
         using var other = ECDiffieHellman.Create();
         other.ImportSubjectPublicKeyInfo(theirEph, out _);
@@ -161,7 +164,7 @@ public static class CallCrypto
             var salt = new byte[callerEph.Length + calleeEph.Length];
             callerEph.CopyTo(salt, 0);
             calleeEph.CopyTo(salt, callerEph.Length);
-            return HKDF.DeriveKey(HashAlgorithmName.SHA256, secret, 32, salt, KeyInfo);
+            return HKDF.DeriveKey(HashAlgorithmName.SHA256, secret, 32, salt, chat ? ChatKeyInfo : KeyInfo);
         }
         finally { CryptographicOperations.ZeroMemory(secret); }
     }
@@ -172,7 +175,7 @@ public static class CallCrypto
 /// counter are authenticated too. Each direction has its own nonce space and the receiver only accepts
 /// increasing counters, so packets can't be forged, altered or replayed.
 /// </summary>
-public sealed class CallSession
+public sealed class CallSession : IDisposable
 {
     readonly AesGcm sealer, opener; // separate instances: sending and receiving run on different threads
     readonly object sendLock = new();
@@ -233,5 +236,10 @@ public sealed class CallSession
         nonce.Clear();
         nonce[0] = direction;
         BinaryPrimitives.WriteUInt64LittleEndian(nonce[4..], counter);
+    }
+
+    public void Dispose()
+    {
+        lock (sendLock) { sealer.Dispose(); opener.Dispose(); }
     }
 }

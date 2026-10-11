@@ -3,7 +3,7 @@ using System.Net;
 namespace WolfSpeak;
 
 /// <summary>Screens the demo mode can show (<c>WolfSpeak.exe --demo call</c>), used for README screenshots.</summary>
-public enum DemoScene { Home, Ringing, Call, Settings }
+public enum DemoScene { Home, Ringing, Call, Settings, Chat, Messages }
 
 /// <summary>
 /// Demo mode: the real UI with made-up friends, a made-up call and no network, audio devices or saved settings.
@@ -39,6 +39,7 @@ public sealed partial class VoiceEngine
                 engine.state = CallState.Ringing;
                 break;
             case DemoScene.Call:
+            case DemoScene.Chat:
                 engine.partnerId = alex.Id;
                 engine.ConnectedAtMs = now - (12 * 60 + 34) * 1000; // "Connected · 12:34"
                 engine.RttMs = 1.6;

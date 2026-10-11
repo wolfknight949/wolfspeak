@@ -26,6 +26,18 @@ public sealed class PeerVm(Peer peer) : INotifyPropertyChanged
     Brush avatarBrush = Brushes.Gray;
     string address = "";
     string versionWarning = "";
+    int unreadMessages;
+    public int UnreadMessages
+    {
+        get => unreadMessages;
+        set
+        {
+            if (unreadMessages == value) return;
+            Set(ref unreadMessages, value);
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(MessageLabel)));
+        }
+    }
+    public string MessageLabel => unreadMessages > 0 ? $"Message ({unreadMessages})" : "Message";
 
     public string Name { get => name; private set => Set(ref name, value); }
     public string Initials { get => initials; private set => Set(ref initials, value); }

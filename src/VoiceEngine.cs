@@ -739,12 +739,17 @@ public sealed partial class VoiceEngine : IDisposable
             return;
         }
         if (type is not (TypeHello or TypeSecure or TypeCallRequest or TypeCallAccept or TypeCallDecline or TypeCallEnd))
-            return;
+            if (type is not (TypeChatRequest or TypeChatAccept or TypeChatSecure)) return;
 
         var peer = Touch(id, ep, out bool isNew);
         if (peer is null) return;
         switch (type)
         {
+            case TypeChatRequest:
+            case TypeChatAccept:
+            case TypeChatSecure:
+                OnChatPacket(type, peer, ep, buf.AsSpan(0, n));
+                break;
             case TypeHello:
             {
                 if (payload.Length > MaxHelloPayload) break;
@@ -794,7 +799,11 @@ public sealed partial class VoiceEngine : IDisposable
         else if (state == CallState.Connected && id == partnerId)
             return peer;
         else if (!peer.EndPoint.Equals(ep))
-            peer.EndPoint = new IPEndPoint(ep.Address, ep.Port);
+        {
+            lock (callLock)
+                if (!chats.TryGetValue(id, out var channel) || channel.Session is null)
+                    peer.EndPoint = new IPEndPoint(ep.Address, ep.Port);
+        }
         peer.LastSeen = Environment.TickCount64;
         return peer;
     }
@@ -823,6 +832,7 @@ public sealed partial class VoiceEngine : IDisposable
     {
         lock (callLock)
         {
+            RemoveChat(peer.Id);
             if (state != CallState.Idle && peer.Id == partnerId)
                 EndCall(state == CallState.Connected ? notice : $"{peer.Name} is no longer reachable");
         }
@@ -843,6 +853,7 @@ public sealed partial class VoiceEngine : IDisposable
 
             lock (callLock)
             {
+                TickChat(now);
                 var p = Partner;
                 switch (state)
                 {
@@ -1004,6 +1015,8 @@ public sealed partial class VoiceEngine : IDisposable
         HangUp();
         running = false;
         tickTimer.Dispose();
+        lock (callLock)
+            foreach (var id in chats.Keys.ToArray()) RemoveChat(id);
 
         var bye = new byte[HeaderSize];
         WriteHeader(bye, TypeBye);

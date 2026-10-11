@@ -67,6 +67,7 @@ public partial class MainWindow : Window
     {
         this.engine = engine;
         InitializeComponent();
+        SizeChanged += (_, _) => UpdateSceneryLayout();
         using (var iconStream = Application.GetResourceStream(new Uri("pack://application:,,,/assets/wolfspeak.ico")).Stream)
         {
             var iconDecoder = System.Windows.Media.Imaging.BitmapDecoder.Create(iconStream,
@@ -77,6 +78,20 @@ public partial class MainWindow : Window
             Resources["ShortcutLogo"] = logo;
         }
         if (demo == DemoScene.Settings) Loaded += (_, _) => ToggleSettings(true);
+        if (demo == DemoScene.Chat) Loaded += (_, _) =>
+        {
+            OnStateChanged(shownState, CallState.Connected);
+            OnChatToggleClick(ChatToggle, new RoutedEventArgs());
+            AddChatMessage(new ChatMessage(1, "Alex Rivera", "Ready for another round?", false));
+            engine.SendChat("Yes! Give me a minute to grab my headset 🐺");
+        };
+        if (demo == DemoScene.Messages) Loaded += (_, _) =>
+        {
+            OnStateChanged(shownState, CallState.Idle);
+            OpenDirectChat(1);
+            AddChatMessage(new ChatMessage(1, "Alex Rivera", "Hey! Want to play? We can call when you're ready.", false, 1));
+            engine.SendChat(1, "Sure! I'll message you when I'm ready 🐺");
+        };
 
         PeerList.ItemsSource = peers;
         IpList.ItemsSource = savedIps;
@@ -98,6 +113,9 @@ public partial class MainWindow : Window
 
         engine.Error += msg => Dispatcher.BeginInvoke(() => ShowNotice(msg));
         engine.Notice += msg => Dispatcher.BeginInvoke(() => ShowNotice(msg));
+        engine.ChatReceived += message => Dispatcher.BeginInvoke(() => AddChatMessage(message));
+        engine.ChatDelivery += (peerId, id, delivered) => Dispatcher.BeginInvoke(() => UpdateChatDelivery(peerId, id, delivered));
+        engine.ChatIdentity += (peerId, fingerprint) => Dispatcher.BeginInvoke(() => RememberChatIdentity(peerId, fingerprint));
         toastTimer.Tick += (_, _) => HideToast();
         frameTimer.Tick += (_, _) => OnFrame();
         frameTimer.Start();
@@ -116,6 +134,7 @@ public partial class MainWindow : Window
         RestoreWindowPosition();
         IsVisibleChanged += (_, _) =>
         {
+            if (IsVisible && !settingsOpen && activeChatPeer is uint id) MarkChatRead(id);
             frameTimer.Interval = TimeSpan.FromMilliseconds(IsVisible ? 30 : 200);
             SetLinkAnimation(engine.State == CallState.Connected);
         };
@@ -204,6 +223,8 @@ public partial class MainWindow : Window
 
     void RestoreWindowPosition()
     {
+        Width = Math.Clamp(settings.WindowWidth ?? 480, MinWidth, Math.Max(MinWidth, SystemParameters.WorkArea.Width));
+        Height = Math.Clamp(settings.WindowHeight ?? 800, MinHeight, Math.Max(MinHeight, SystemParameters.WorkArea.Height));
         if (settings.WindowLeft is not double left || settings.WindowTop is not double top) return;
         // Only if it's still on a connected screen.
         if (left < SystemParameters.VirtualScreenLeft || top < SystemParameters.VirtualScreenTop ||
@@ -219,6 +240,8 @@ public partial class MainWindow : Window
         if (WindowState != WindowState.Normal || !IsLoaded) return;
         settings.WindowLeft = Left;
         settings.WindowTop = Top;
+        settings.WindowWidth = Width;
+        settings.WindowHeight = Height;
     }
 
     // ------------------------------------------------------------------ tray
@@ -605,6 +628,7 @@ public partial class MainWindow : Window
             TitleStars.Advance(now);
         }
         var state = engine.State;
+        if (activeChatPeer is not null) UpdateChatAvailability();
         if (state != shownState) OnStateChanged(shownState, state);
         UpdateTray(state);
 
@@ -662,6 +686,9 @@ public partial class MainWindow : Window
     void OnStateChanged(CallState from, CallState to)
     {
         shownState = to;
+        DirectChatView.Visibility = Visibility.Collapsed;
+        activeChatPeer = null;
+        UpdateSceneryLayout();
         FrameworkElement view = to switch
         {
             CallState.Idle => HomeView,
@@ -691,6 +718,14 @@ public partial class MainWindow : Window
                 nextRingSoundMs = 0;
                 break;
             case CallState.Connected:
+                ChatMessages.Children.Clear();
+                ChatInput.Clear();
+                ChatSend.IsEnabled = true;
+                ChatSend.Content = "Send";
+                ChatEmptyHint.Visibility = Visibility.Visible;
+                ChatToggle.Content = "Open chat";
+                ChatPanel.Visibility = Visibility.Collapsed;
+                CallDetails.Visibility = Visibility.Visible;
                 CheckPartnerKey();
                 engine.PlaySound(SoundKind.Connected);
                 engine.Deafened = false;
@@ -821,7 +856,7 @@ public partial class MainWindow : Window
             bool empty = peers.Count == 0;
             EmptyState.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
         }
-        foreach (var vm in peers) vm.Update();
+        foreach (var vm in peers) { vm.Update(); vm.UnreadMessages = unreadChats.GetValueOrDefault(vm.Id); }
     }
 
     void TryPendingIpCall(long now)
@@ -912,11 +947,21 @@ public partial class MainWindow : Window
 
     void OnSettingsClick(object sender, RoutedEventArgs e) => ToggleSettings(!settingsOpen);
 
+    void UpdateSceneryLayout()
+    {
+        // Keep the complete 240 x 100 pixel world across the window, plus its fog.
+        // Reserve space beneath it for the ringing content and pinned controls.
+        double sceneryHeight = Math.Max(244, (ActualWidth > 0 ? ActualWidth : Width) * 100 / 240 + 64);
+        MinHeight = Math.Max(800, 58 + sceneryHeight + 420);
+        SceneryRow.Height = new GridLength(settingsOpen ? 0 : sceneryHeight);
+    }
+
     void ToggleSettings(bool open)
     {
         settingsOpen = open;
+        if (!open && activeChatPeer is uint id) MarkChatRead(id);
         SceneryHeader.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
-        SceneryRow.Height = new GridLength(open ? 0 : 244);
+        UpdateSceneryLayout();
         SetLinkAnimation(engine.State == CallState.Connected);
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
         if (open)

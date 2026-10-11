@@ -3,6 +3,15 @@
 Every release needs an entry here before it's tagged — the release build copies the matching section
 into the GitHub release notes (and fails if there isn't one).
 
+## [1.0.6] - 2026-10-10
+
+### Added
+- Encrypted text chat before, during, and after calls, with delivery acknowledgments and retries. Message friends from your pack and start a call from the conversation. Messages stay in memory until you quit.
+
+### Changed
+- Minimum window height is 800 pixels. Full-width scenery is preserved during calls; pinned answer/call controls remain visible while call details and chat scroll independently.
+- Window starts at 480 pixels wide, resizes in both directions, and remembers its size.
+
 ## [1.0.5] - 2026-10-09
 
 ### Added

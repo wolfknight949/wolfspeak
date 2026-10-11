@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:WolfSpeak"
-        Title="WolfSpeak" Width="420" Height="720" MinWidth="420" MaxWidth="420" MinHeight="600"
+        Title="WolfSpeak" Width="480" Height="800" MinWidth="420" MinHeight="800"
         Icon="assets/wolfspeak.ico"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextBrush}"
@@ -10,9 +10,17 @@
         UseLayoutRounding="True" TextOptions.TextFormattingMode="Ideal">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="58" ResizeBorderThickness="0,6,0,6" GlassFrameThickness="0"
+        <WindowChrome CaptionHeight="58" ResizeBorderThickness="6" GlassFrameThickness="0"
                       CornerRadius="0" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
+    <Window.Resources>
+        <Style x:Key="ChatButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="Opacity" Value="0.75"/></Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
 
     <Grid x:Name="Root" Background="{DynamicResource BgBrush}">
 
@@ -145,8 +153,12 @@
                                             <TextBlock Text="{Binding VersionWarning}" Visibility="{Binding VersionWarningVisibility}"
                                                        FontSize="11.5" Foreground="{StaticResource AmberBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
-                                        <Button Grid.Column="2" Style="{StaticResource CallButton}" Content="Call" Tag="{Binding}"
-                                                Click="OnCallPeerClick" AutomationProperties.Name="{Binding Name, StringFormat=Call {0}}"/>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Style="{StaticResource ChatButton}" Content="{Binding MessageLabel}" Tag="{Binding}" Height="32" FontSize="12" Padding="10,0" Margin="0,0,6,0"
+                                                    Click="OnMessagePeerClick" AutomationProperties.Name="{Binding Name, StringFormat=Message {0}}"/>
+                                            <Button Style="{StaticResource CallButton}" Content="Call" Tag="{Binding}" Height="32" FontSize="12"
+                                                    Click="OnCallPeerClick" AutomationProperties.Name="{Binding Name, StringFormat=Call {0}}"/>
+                                        </StackPanel>
                                     </Grid>
                                 </Border>
                                 <DataTemplate.Triggers>
@@ -198,6 +210,11 @@
         <!-- ======================================================= RINGING / CALLING -->
         <Grid x:Name="RingView" Grid.Row="2" Visibility="Collapsed" Margin="16,0,16,30">
             <Grid.RenderTransform><TranslateTransform/></Grid.RenderTransform>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto" MinHeight="100"/>
+            </Grid.RowDefinitions>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel VerticalAlignment="Center">
                 <Grid Width="250" Height="250">
                     <Ellipse x:Name="RingPulse1" Stroke="{DynamicResource CyanBrush}" StrokeThickness="2" RenderTransformOrigin="0.5,0.5" Opacity="0">
@@ -221,7 +238,9 @@
                            FontWeight="SemiBold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
                 <TextBlock x:Name="RingStatus" HorizontalAlignment="Center" FontSize="14" Foreground="{DynamicResource SubTextBrush}" Margin="0,4,0,0"/>
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,44,0,0">
+            </StackPanel>
+            </ScrollViewer>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0">
                     <StackPanel>
                         <Button Style="{StaticResource RoundButton}" Width="70" Height="70" FontSize="24"
                                 Background="#E11D48" Content="&#xE778;" Click="OnHangUpClick" AutomationProperties.Name="Decline"/>
@@ -244,7 +263,6 @@
                         <TextBlock Text="Accept" HorizontalAlignment="Center" Margin="0,8,0,0" FontSize="12.5" Foreground="{DynamicResource SubTextBrush}"/>
                     </StackPanel>
                 </StackPanel>
-            </StackPanel>
         </Grid>
 
         <!-- ======================================================= CONNECTED -->
@@ -280,7 +298,12 @@
                 </Border>
             </DockPanel>
 
-            <StackPanel Grid.Row="1" VerticalAlignment="Center">
+            <Grid Grid.Row="1" Margin="0,10,0,14">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                <Button x:Name="ChatToggle" Content="Open chat" Style="{StaticResource ChatButton}"
+                        HorizontalAlignment="Right" Margin="0,0,0,8" Click="OnChatToggleClick"/>
+                <ScrollViewer x:Name="CallDetails" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel VerticalAlignment="Center">
                 <Grid HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="110"/>
@@ -360,6 +383,23 @@
                                VerticalAlignment="Center" Width="36"/>
                 </StackPanel>
             </StackPanel>
+                </ScrollViewer>
+                <Grid x:Name="ChatPanel" Grid.Row="1" Visibility="Collapsed">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*" MinHeight="120"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <TextBlock Text="Encrypted chat · messages kept until you quit" FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,8"/>
+                    <ScrollViewer x:Name="ChatScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="ChatMessages"/>
+                    </ScrollViewer>
+                    <TextBlock x:Name="ChatEmptyHint" Grid.Row="1" Text="Send a message to your friend.&#x0a;Press Enter to send."
+                               TextAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" IsHitTestVisible="False"/>
+                    <DockPanel Grid.Row="2" Margin="0,10,0,0">
+                        <Button x:Name="ChatSend" DockPanel.Dock="Right" Content="Send" Style="{StaticResource ChatButton}"
+                                Margin="8,0,0,0" Click="OnChatSendClick" AutomationProperties.Name="Send message"/>
+                        <TextBox x:Name="ChatInput" Style="{StaticResource DarkTextBox}" Tag="Type a message…"
+                                 MaxLength="400" KeyDown="OnChatInputKeyDown" AutomationProperties.Name="Chat message"/>
+                    </DockPanel>
+                </Grid>
+            </Grid>
 
             <!-- controls -->
             <StackPanel Grid.Row="2" HorizontalAlignment="Center" Orientation="Horizontal">
@@ -382,6 +422,28 @@
         </Grid>
 
         <!-- ======================================================= SETTINGS drawer -->
+        <Grid x:Name="DirectChatView" Grid.Row="2" Visibility="Collapsed" Margin="24,10,24,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <Button Content="&#xE72B;" Style="{StaticResource IconButton}" Click="OnChatBackClick" ToolTip="Back to your pack" AutomationProperties.Name="Back to your pack"/>
+                <TextBlock x:Name="DirectChatName" Grid.Column="1" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="8,0"/>
+                <Button x:Name="DirectChatCall" Grid.Column="2" Content="Call" Style="{StaticResource CallButton}" Click="OnChatCallClick"/>
+            </Grid>
+            <TextBlock x:Name="DirectChatStatus" Grid.Row="1" Text="Encrypted messages · no call needed" Foreground="{DynamicResource SubTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
+            <ScrollViewer x:Name="DirectChatScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="DirectChatMessages"/>
+            </ScrollViewer>
+            <TextBlock x:Name="DirectChatEmptyHint" Grid.Row="2" Text="Say hello before you call.&#x0a;Press Enter to send a message."
+                       TextAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" IsHitTestVisible="False"/>
+            <DockPanel Grid.Row="3" Margin="0,12,0,0">
+                <Button x:Name="DirectChatSend" DockPanel.Dock="Right" Content="Send" Style="{StaticResource ChatButton}" Click="OnChatSendClick" Margin="8,0,0,0" AutomationProperties.Name="Send message"/>
+                <TextBox x:Name="DirectChatInput" Style="{StaticResource DarkTextBox}" Tag="Type a message…" MaxLength="400" KeyDown="OnChatInputKeyDown" AutomationProperties.Name="Chat message"/>
+            </DockPanel>
+        </Grid>
+
         <Grid x:Name="SettingsView" Grid.Row="1" Grid.RowSpan="2" Visibility="Collapsed" Background="{DynamicResource BgBrush}" ClipToBounds="True">
             <Grid.RenderTransform>
                 <TranslateTransform x:Name="SettingsShift"/>

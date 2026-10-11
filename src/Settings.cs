@@ -24,6 +24,8 @@ public sealed class Settings
     public bool TrayHintShown { get; set; }
     public double? WindowLeft { get; set; }
     public double? WindowTop { get; set; }
+    public double? WindowWidth { get; set; }
+    public double? WindowHeight { get; set; }
 
     static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WolfSpeak", "settings.json");

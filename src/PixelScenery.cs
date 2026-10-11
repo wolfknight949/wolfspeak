@@ -111,7 +111,9 @@ public sealed class PixelScenery : FrameworkElement
         // Uniform scaling preserves square pixels, wolf proportions, and round celestial bodies.
         // Reserve a separate ground extension for the fade, after the complete illustrated scene.
         double sceneHeight = Math.Max(1, ActualHeight - 64);
-        double scale = Math.Min(ActualWidth / 240, sceneHeight / 100);
+        // Fill the entire window width. On very wide windows, clip spare sky above
+        // the scene instead of shrinking the forest into a centered thumbnail.
+        double scale = ActualWidth / 240;
         dc.DrawRectangle(p[0], null, new Rect(0, 0, ActualWidth, Math.Max(0, sceneHeight - 100 * scale)));
         dc.PushTransform(new TranslateTransform((ActualWidth - 240 * scale) / 2, sceneHeight - 100 * scale));
         dc.PushTransform(new ScaleTransform(scale, scale));

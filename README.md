@@ -87,6 +87,7 @@ note in your pack.
 
 1. Both of you open **WolfSpeak** on the same Wi-Fi or router.
 2. Your friend appears under **Your pack**. Press **Call**.
+   Or press **Message** to send encrypted text before calling. Chat works without starting a voice call; you can call from the conversation when you're ready.
 3. They press **Accept**. Talk. 🎧
 
 > **Friend doesn't appear?** (different subnet, or a ZeroTier / Radmin / Tailscale VPN)
@@ -96,6 +97,7 @@ note in your pack.
 <summary><b>In a call</b></summary>
 
 - 🎙 **Mute** · ☎ **Hang up** · 🎧 **Deafen** (stop hearing your friend)
+- **Open chat** continues your conversation during a call. Press Enter or Send; each message shows its delivery status. Messages stay in memory until you quit, with a 400-character limit.
 - Live ping and packet loss with a quality dot (green / amber / red), and a volume slider for your friend.
 - 🔒 **Safety code**: read it to each other once. If it matches on both PCs, nobody is listening in between.
 - Hotkeys that work in game: **Ctrl+Shift+M** mute · **Ctrl+Shift+D** deafen.
@@ -138,8 +140,12 @@ note in your pack.
 - **Safety code + key memory.** The 6-digit code matches on both PCs unless someone is relaying the call.
   WolfSpeak also remembers each friend's key and warns if it changes.
 - **Discovery is open by design.** Anyone on your network can see your WolfSpeak name and ring you, but
-  nobody connects until you press **Accept**. Pick a nickname in Settings if you'd rather not show your
+  voice calls start only after you press **Accept**. Discovered peers on the same version can also send
+  encrypted text without a call. Pick a nickname in Settings if you'd rather not show your
   Windows username.
+- **Text has its own encrypted connection.** Signed ephemeral keys and AES-256-GCM protect chat independently
+  of voice calls. Delivery acknowledgments and retries handle dropped packets. Conversations are bounded
+  to the latest 200 messages per friend and are never saved to disk.
 
 <details>
 <summary><b>How it works under the hood</b></summary>
