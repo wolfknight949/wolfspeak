@@ -59,60 +59,57 @@ public sealed class SoundPlayer : ISampleProvider
     const double G5 = 783.99, A5 = 880.00, B5 = 987.77,
         C6 = 1046.50, D6 = 1174.66, E6 = 1318.51, F6 = 1396.91, G6 = 1567.98, A6 = 1760.00, C7 = 2093.00;
 
-    const double Eighth = 0.14; // ring tempo
+    const double Eighth = 0.28; // relaxed ring tempo
 
-    /// <summary>
-    /// Home-appliance style: a clean beeper tone playing short, cheerful major melodies, and single "pip"s for
-    /// buttons. All melodies are original. Levels are matched by loudness (RMS), not peak, since a square-wave
-    /// melody sounds far louder than its peak suggests.
-    /// </summary>
+    /// <summary>Original gentle chime melodies, balanced by audible RMS loudness.</summary>
     internal static float[] Render(SoundKind kind)
     {
-        Beeper b;
+        Chime b;
         switch (kind)
         {
             case SoundKind.Ring: // incoming: a little song that climbs, hangs on G, then comes home to C (repeats after a pause)
-                b = new Beeper(3.3);
+                b = new Chime(4.5);
                 b.Melody(0, Eighth,
-                    (C6, 1), (E6, 1), (G6, 1), (E6, 1), (F6, 1), (D6, 1), (B5, 1), (D6, 1), (G5, 3),
-                    (A5, 1), (C6, 1), (F6, 1), (A6, 1), (G6, 1), (E6, 1), (D6, 1), (B5, 1), (C6, 4));
-                return b.Finish(rmsDb: -23);
-
-            case SoundKind.Ringback: // while you wait: a soft "pi-po"
-                b = new Beeper(0.5);
-                b.Melody(0, 0.11, (E6, 1), (C6, 2));
+                    (C6, 1), (E6, 1), (G6, 2), (E6, 1), (D6, 1), (C6, 2),
+                    (A5, 1), (E6, 1), (D6, 1), (C6, 3));
+                b.Harmony(0, 2.0, C6 / 4, E6 / 4, G6 / 4);
+                b.Harmony(2.1, 2.2, A5 / 2, C6 / 4, E6 / 4);
                 return b.Finish(rmsDb: -30);
 
-            case SoundKind.Connected: // "start" chime: quick rising pips
-                b = new Beeper(0.6);
-                b.Melody(0, 0.075, (C6, 1), (E6, 1), (G6, 1), (C7, 3));
-                return b.Finish(rmsDb: -25);
+            case SoundKind.Ringback: // while you wait: a soft "pi-po"
+                b = new Chime(1.15);
+                b.Melody(0, 0.16, (E6, 1), (C6, 2));
+                return b.Finish(rmsDb: -35);
+
+            case SoundKind.Connected: // "start" chime: gentle rising chimes
+                b = new Chime(1.3);
+                b.Melody(0, 0.16, (C6, 1), (E6, 1), (G6, 2));
+                b.Harmony(0.12, 1.0, C6 / 4, E6 / 4, G6 / 4);
+                return b.Finish(rmsDb: -32);
 
             case SoundKind.Ended: // "done": a short falling tune that resolves
-                b = new Beeper(1.0);
-                b.Melody(0, 0.1, (G6, 1), (E6, 1), (C6, 1), (D6, 1), (B5, 1), (C6, 4));
-                return b.Finish(rmsDb: -25);
+                b = new Chime(1.5);
+                b.Melody(0, 0.22, (E6, 1), (G5, 1), (C6, 2));
+                b.Harmony(0.18, 1.15, C6 / 4, E6 / 4, G6 / 4);
+                return b.Finish(rmsDb: -32);
 
-            case SoundKind.MuteOn: // lower button pip
-                b = new Beeper(0.09);
-                b.Melody(0, 0.06, (A5, 1));
-                return b.Finish(rmsDb: -28);
+            case SoundKind.MuteOn: // lower soft chime
+                b = new Chime(0.65);
+                b.Melody(0, 0.10, (A5, 1));
+                return b.Finish(rmsDb: -35);
 
-            case SoundKind.MuteOff: // higher button pip
-                b = new Beeper(0.09);
-                b.Melody(0, 0.06, (E6, 1));
-                return b.Finish(rmsDb: -28);
+            case SoundKind.MuteOff: // higher soft chime
+                b = new Chime(0.65);
+                b.Melody(0, 0.10, (E6, 1));
+                return b.Finish(rmsDb: -35);
 
             default:
                 return [];
         }
     }
 
-    /// <summary>
-    /// Appliance beeper: a band-limited square wave, softened by a gentle low-pass the way a little
-    /// speaker behind plastic sounds, each note slightly decaying with a tiny gap so notes stay distinct.
-    /// </summary>
-    sealed class Beeper(double seconds)
+    /// <summary>Warm sine chimes with smooth attacks and overlapping, decaying tails.</summary>
+    sealed class Chime(double seconds)
     {
         static readonly int Rate = VoiceEngine.SampleRate;
         readonly double[] mix = new double[(int)(seconds * Rate)];
@@ -124,46 +121,41 @@ public sealed class SoundPlayer : ISampleProvider
             foreach (var (freq, beats) in notes)
             {
                 double length = unit * beats;
-                Note(freq, t, length - 0.012); // 12 ms of air between notes
+                Note(freq / 2, t, length + 0.55); // Let notes blend into a soft tail.
                 t += length;
             }
         }
 
-        void Note(double freq, double start, double length)
+        public void Harmony(double start, double length, params double[] frequencies)
+        {
+            foreach (double freq in frequencies) Note(freq, start, length, 0.16, 0.14);
+        }
+
+        void Note(double freq, double start, double length, double gain = 1, double attackSeconds = 0.065)
         {
             int s0 = (int)(start * Rate);
             int n = Math.Min((int)(length * Rate), mix.Length - s0);
-            double dt = freq / Rate, phase = 0;
-            int attack = (int)(0.003 * Rate), release = (int)(0.008 * Rate);
             for (int i = 0; i < n; i++)
             {
-                phase += dt;
-                if (phase >= 1) phase -= 1;
-                double s = phase < 0.5 ? 1 : -1;
-                double p2 = phase - 0.5;
-                if (p2 < 0) p2 += 1;
-                s += Blep(phase, dt) - Blep(p2, dt);
-                double env = Math.Min(1, i / (double)attack) * Math.Min(1, (n - i) / (double)release)
-                           * (1 - 0.35 * i / n); // slight decay through the note
-                mix[s0 + i] += s * env;
+                double t = i / (double)Rate;
+                double phase = 2 * Math.PI * freq * t;
+                // A warm lower octave and quiet detuned voices give the sine a fuller body.
+                double tone = 0.72 * Math.Sin(phase) + 0.22 * Math.Sin(phase / 2)
+                            + 0.08 * Math.Sin(phase * 1.002) + 0.08 * Math.Sin(phase * 0.998)
+                            + 0.025 * Math.Sin(2 * phase) * Math.Exp(-5 * t);
+                double attack = Math.Min(1, t / attackSeconds);
+                double release = Math.Min(1, (n - 1 - i) / (0.32 * Rate));
+                double env = (0.5 - 0.5 * Math.Cos(Math.PI * attack))
+                           * (0.5 - 0.5 * Math.Cos(Math.PI * release)) * Math.Exp(-2.6 * t);
+                mix[s0 + i] += tone * env * gain;
             }
         }
-
-        /// <summary>PolyBLEP: smooths a hard edge over one sample on each side of the discontinuity.</summary>
-        static double Blep(double phase, double dt)
-        {
-            if (phase < dt) { double x = phase / dt; return x + x - x * x - 1; }
-            if (phase > 1 - dt) { double x = (phase - 1) / dt; return x * x + x + x + 1; }
-            return 0;
-        }
-
         /// <summary>
-        /// Two-pole low-pass (~3.5 kHz) for the soft beeper tone, then set the loudness to <paramref name="rmsDb"/>
-        /// (measured over the sounding part only), never letting peaks go above 0.5.
+        /// Two-pole low-pass (~1.5 kHz), then match audible RMS and cap peaks at 0.18.
         /// </summary>
         public float[] Finish(double rmsDb)
         {
-            double a = Math.Exp(-2 * Math.PI * 3500.0 / Rate), y1 = 0, y2 = 0;
+            double a = Math.Exp(-2 * Math.PI * 1500.0 / Rate), y1 = 0, y2 = 0;
             var output = new float[mix.Length];
             double max = 1e-9, sum = 0;
             int sounding = 0;
@@ -176,7 +168,7 @@ public sealed class SoundPlayer : ISampleProvider
                 if (Math.Abs(y2) > 1e-4) { sum += y2 * y2; sounding++; }
             }
             double rms = Math.Sqrt(sum / Math.Max(1, sounding));
-            float gain = (float)Math.Min(Math.Pow(10, rmsDb / 20) / Math.Max(rms, 1e-9), 0.5 / max);
+            float gain = (float)Math.Min(Math.Pow(10, rmsDb / 20) / Math.Max(rms, 1e-9), 0.18 / max);
             for (int i = 0; i < output.Length; i++) output[i] *= gain;
             return output;
         }

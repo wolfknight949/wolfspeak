@@ -3,6 +3,12 @@
 Every release needs an entry here before it's tagged — the release build copies the matching section
 into the GitHub release notes (and fails if there isn't one).
 
+## [1.0.7] - 2026-10-11
+
+### Changed
+- Softer, warmer call and mute sounds with lower tones, gentle harmony, rounded attacks, and longer fades.
+- A calmer incoming-call melody and quieter notification levels.
+
 ## [1.0.6] - 2026-10-10
 
 ### Added
